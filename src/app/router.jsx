@@ -13,6 +13,7 @@ import {
 import { AuthLayoutRoute } from '@/features/auth/pages/AuthLayoutRoute'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { VerifyOtpPage } from '@/features/auth/pages/VerifyOtpPage'
+import { RegisterPage } from '@/features/users/pages/RegisterPage'
 import { GuestOnly } from '@/routes/GuestOnly'
 import { RequireAuth } from '@/routes/RequireAuth'
 import { RequireRole } from '@/routes/RequireRole'
@@ -59,25 +60,7 @@ export const router = createBrowserRouter([
         children: [
           { path: paths.login, element: <LoginPage /> },
           { path: paths.loginVerify, element: <VerifyOtpPage /> },
-          {
-            // Sitting inside the auth card is temporary: registration is a
-            // long form and will want its own width. Move it out of this
-            // layout when the screen is designed.
-            path: paths.register,
-            element: (
-              <NotBuiltYet
-                title="Register"
-                note="Public — it runs before any session exists. Which code field to send depends on the role, and sending a forbidden one is a 400."
-                endpoints={[
-                  'GET /users/check-email',
-                  'GET /lookups/regions',
-                  'GET /lookups/groups',
-                  'GET /lookups/branches',
-                  'POST /users/register',
-                ]}
-              />
-            ),
-          },
+          { path: paths.register, element: <RegisterPage /> },
         ],
       },
     ],

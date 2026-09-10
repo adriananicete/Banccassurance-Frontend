@@ -145,7 +145,7 @@ export function LoginForm({
 
       <div className="flex justify-center items-center">
         <p className="text-xs">
-          Don't have an account yet? <Link to={paths.register}>Sign Up</Link>
+          Don't have an account yet? <Link to={paths.register} className="font-bold hover:text-[#157d03]">Sign Up</Link>
         </p>
       </div>
     </form>
