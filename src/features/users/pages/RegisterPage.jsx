@@ -24,6 +24,36 @@ import {
   visibleCodeFields,
 } from '../schemas'
 
+/**
+ * The wizard.
+ *
+ * `fields` is what `trigger()` validates before letting the user move on, so
+ * a step never advances over its own errors and never shows errors belonging
+ * to a step the user has not reached.
+ *
+ * ⚠️ THE LOCATION STEP IS NOT ALWAYS THERE. Three of the eight roles --
+ * Regional Sales Head, Sector Head and Department Head -- send no group,
+ * branch or region at all, so for them registration is two steps and the
+ * counter says so. A step with no fields is a click that does nothing.
+ */
+const STEPS = [
+  {
+    id: 'identity',
+    title: 'Role and name',
+    fields: ['role', 'firstName', 'middleName', 'lastName', 'suffix'],
+  },
+  {
+    id: 'contact',
+    title: 'Contact details',
+    fields: ['birthday', 'mobileNumber', 'employeeNo', 'email'],
+  },
+  {
+    id: 'location',
+    title: 'Where you work',
+    fields: ['groupCode', 'branchCode', 'regionCode'],
+  },
+]
+
 const EMPTY_FORM = {
   role: '',
   firstName: '',
@@ -54,11 +84,14 @@ export function RegisterPage() {
   const { tenant: tenantSlug } = useParams()
   const tenant = TENANT_SLUGS[tenantSlug]
 
+  const [stepIndex, setStepIndex] = useState(0)
+
   const {
     register,
     handleSubmit,
     control,
     setValue,
+    trigger,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(registerSchema),
@@ -111,9 +144,47 @@ export function RegisterPage() {
 
   const registerMutation = useRegisterUser()
 
-  const onSubmit = handleSubmit((values) => {
+  /**
+   * Drop the location step when this role sends none of the three codes.
+   * Until a role is picked, `codeFields` is all false -- so the counter reads
+   * "of 2" on the first step and becomes "of 3" once a role that needs a
+   * location is chosen. That is honest rather than tidy: promising a third
+   * step and then not having one is worse than the counter moving.
+   */
+  const needsLocation = codeFields.group || codeFields.branch || codeFields.region
+  const activeSteps = needsLocation ? STEPS : STEPS.filter((s) => s.id !== 'location')
+
+  /**
+   * Clamped on read rather than corrected in state. Going back to step 1 and
+   * switching to a role with no location shortens the wizard underneath the
+   * current index, and clamping here handles that without a second render.
+   */
+  const safeIndex = Math.min(stepIndex, activeSteps.length - 1)
+  const step = activeSteps[safeIndex]
+  const isLastStep = safeIndex === activeSteps.length - 1
+
+  const submitAll = handleSubmit((values) => {
     registerMutation.mutate(buildRegistrationPayload(values))
   })
+
+  /**
+   * One handler for the form, so pressing Enter in a text field does exactly
+   * what the button does. Without this, Enter on step 1 would run the whole
+   * schema and light up errors on fields the user has not reached.
+   */
+  const onSubmit = async (event) => {
+    event.preventDefault()
+
+    if (isLastStep) {
+      submitAll(event)
+      return
+    }
+
+    // Validate only this step's fields. `trigger` runs the whole schema but
+    // reports on the names given, which is what keeps later steps quiet.
+    const isStepValid = await trigger(step.fields)
+    if (isStepValid) setStepIndex(safeIndex + 1)
+  }
 
   // An unknown slug -- a typo, or an old link -- goes back to the chooser
   // rather than rendering a form with an empty role list and no way forward.
@@ -137,6 +208,12 @@ export function RegisterPage() {
 
   return (
     <RegisterForm
+      step={step}
+      stepNumber={safeIndex + 1}
+      stepCount={activeSteps.length}
+      isFirstStep={safeIndex === 0}
+      isLastStep={isLastStep}
+      onBack={() => setStepIndex(Math.max(0, safeIndex - 1))}
       register={register}
       errors={errors}
       onSubmit={onSubmit}

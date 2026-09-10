@@ -4,50 +4,61 @@
  * ============================================================================
  *
  * Presentational. `pages/RegisterPage.jsx` supplies every prop, fetches every
- * dropdown, and decides which fields this role is allowed to send.
+ * dropdown, decides which fields this role may send, and owns the step.
  *
  * The rows reuse LoginForm's shape exactly: a bordered row that stretches its
  * children to full height, an icon wrapper that centres its own icon, and a
  * borderless text-xs input. `Field` and `SelectField` at the bottom hold that
  * markup once so a restyle is one edit rather than eleven.
  *
+ * WIDTH: max-w-md rather than LoginForm's max-w-sm. 64px wider, which is what
+ * two columns need -- max-w-sm minus px-14 leaves 272px, so a column would be
+ * 136px. Keeping each step to two or three rows is what stops the page from
+ * scrolling, which was the point of splitting it up.
+ *
  * The props contract:
  *
- *   register / errors / onSubmit / isPending / serverError
- *                   As in LoginForm. `serverError` is the backend's own
- *                   wording -- show it as given. Registration has several
- *                   distinct 400s and 409s and only the message separates
- *                   them.
+ *   step          { id, title } for the step being shown. `id` is one of
+ *                 'identity', 'contact', 'location'.
+ *   stepNumber / stepCount    1-based, for the counter.
+ *   isFirstStep / isLastStep
+ *   onBack        Previous step. Absent on the first.
+ *   onSubmit      The form's own handler. It advances on every step except
+ *                 the last, where it submits -- so Enter in a text field does
+ *                 the same thing the button does.
  *
- *   roleOptions     [{ value, label }] -- the FOUR roles that belong to the
- *                   company chosen on the previous screen, not all eight.
- *                   SUPERADMIN is never among them; it is seeded, never
- *                   registered, and answers 400.
+ *   register / errors / isPending / serverError
+ *                 As in LoginForm. `serverError` is the backend's own
+ *                 wording -- show it as given. Registration has several
+ *                 distinct 400s and 409s and only the message separates them.
  *
- *   tenantLabel     "Landbank" or "PhilLife". Shown so the user can tell they
- *                   are on the right form -- the four roles offered would
- *                   otherwise be the only clue.
- *   changeTenantPath  Back to the chooser.
+ *   roleOptions   [{ value, label }] -- the FOUR roles that belong to the
+ *                 company chosen on the previous screen, not all eight.
+ *                 SUPERADMIN is never among them; it is seeded, never
+ *                 registered, and answers 400.
  *
- *   codeFields      { group, branch, region, groupRequired, ... } -- which of
- *                   the three location fields this role may send. Render only
- *                   what is true. SENDING A FORBIDDEN ONE IS A 400, so a field
- *                   shown for the wrong role is not cosmetic.
+ *   tenantLabel     "Landbank" or "PhilLife".
+ *   changeTenantPath  Back to the company chooser.
+ *
+ *   codeFields    { group, branch, region, groupRequired, ... } -- which of
+ *                 the three location fields this role may send. SENDING A
+ *                 FORBIDDEN ONE IS A 400, so a field shown for the wrong role
+ *                 is not cosmetic. When all three are false the container
+ *                 drops the location step entirely and this never renders it.
  *
  *   regions / groups / branches      Dropdown rows, already fetched.
  *   isLoadingGroups / isLoadingBranches
  *   hasGroupSelected                 The branch select stays disabled until a
  *                                    group is chosen -- see the note on it.
  *
- *   emailTaken      true / false / null. A courtesy check; the submit answers
- *                   409 for a taken address regardless.
- *   onEmailBlur     Fires the check.
+ *   emailTaken    true / false / null. A courtesy check; the submit answers
+ *                 409 for a taken address regardless.
+ *   onEmailBlur   Fires the check.
  *
  *   birthdayMin / birthdayMax
- *                   YYYY-MM-DD bounds for the date picker, from the age rules
- *                   in schemas.js. They only grey out dates in the picker --
- *                   a typed or pasted date ignores them, so the schema checks
- *                   the same bounds again.
+ *                 YYYY-MM-DD bounds for the date picker, from the age rules in
+ *                 schemas.js. They only grey out dates in the picker -- a typed
+ *                 or pasted date ignores them, so the schema checks again.
  *
  * WHAT THE USER PICKS HERE IS THEIR APPROVER'S SCOPE, NOT THEIR OWN. An
  * Account Officer choosing a group is naming whose queue they land in; the
@@ -56,6 +67,7 @@
  */
 import { FiUser } from "react-icons/fi";
 import {
+  LuArrowLeft,
   LuBriefcase,
   LuBuilding2,
   LuCalendar,
@@ -71,9 +83,15 @@ import { Link } from "react-router";
 import { paths } from "@/routes/paths";
 
 export function RegisterForm({
+  step,
+  stepNumber,
+  stepCount,
+  isFirstStep,
+  isLastStep,
+  onBack,
+  onSubmit,
   register,
   errors,
-  onSubmit,
   isPending,
   serverError,
   roleOptions,
@@ -94,7 +112,7 @@ export function RegisterForm({
   return (
     <form
       onSubmit={onSubmit}
-      className="flex w-full max-w-2xl flex-col gap-6 px-10 py-6"
+      className="flex w-full max-w-md flex-col gap-6 px-10 py-6"
     >
       <div className="w-full flex flex-col justify-center items-center gap-2">
         <div className="bg-[#ededed] p-2 w-14 flex justify-center items-center rounded-full shadow-inner">
@@ -104,16 +122,23 @@ export function RegisterForm({
         </div>
 
         <div className="flex flex-col justify-center items-center">
-          <h1 className="text-lg font-semibold">Create your {tenantLabel} account</h1>
-          <p className="mt-1 text-center text-xs text-muted-foreground">
-            Your password will be emailed to you once your registration is approved.
-          </p>
+          <h1 className="text-lg font-semibold">{step.title}</h1>
           <p className="mt-1 text-xs text-muted-foreground">
-            Not {tenantLabel}?{" "}
-            <Link to={changeTenantPath} className="font-bold hover:text-[#157d03]">
-              Change company
-            </Link>
+            {tenantLabel} · Step {stepNumber} of {stepCount}
           </p>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          {Array.from({ length: stepCount }, (_, index) => (
+            <span
+              key={index}
+              className={
+                index < stepNumber
+                  ? "h-1 w-8 rounded-full bg-indigo-950"
+                  : "h-1 w-8 rounded-full bg-neutral-300"
+              }
+            />
+          ))}
         </div>
       </div>
 
@@ -126,99 +151,108 @@ export function RegisterForm({
         </p>
       ) : null}
 
-      <SelectField
-        label="Role"
-        required
-        icon={<LuBriefcase />}
-        error={errors.role}
-        registration={register("role")}
-        placeholder="Select your role"
-        options={roleOptions}
-      />
+      {step.id === "identity" ? (
+        <div className="grid gap-4">
+          <SelectField
+            label="Role"
+            required
+            icon={<LuBriefcase />}
+            error={errors.role}
+            registration={register("role")}
+            placeholder="Select your role"
+            options={roleOptions}
+          />
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field
-          label="First name"
-          required
-          icon={<FiUser />}
-          error={errors.firstName}
-          registration={register("firstName")}
-          maxLength={60}
-        />
-        <Field
-          label="Middle name"
-          icon={<FiUser />}
-          error={errors.middleName}
-          registration={register("middleName")}
-          maxLength={60}
-        />
-        <Field
-          label="Last name"
-          required
-          icon={<FiUser />}
-          error={errors.lastName}
-          registration={register("lastName")}
-          maxLength={60}
-        />
-        <Field
-          label="Suffix"
-          icon={<FiUser />}
-          error={errors.suffix}
-          registration={register("suffix")}
-          placeholder="Jr., III"
-          maxLength={20}
-        />
-        <Field
-          label="Birthday"
-          required
-          type="date"
-          icon={<LuCalendar />}
-          error={errors.birthday}
-          registration={register("birthday")}
-          // Greys out the impossible dates in the native picker. The schema
-          // still checks the same bounds -- these attributes only constrain
-          // the picker, and a typed or pasted date walks straight past them.
-          min={birthdayMin}
-          max={birthdayMax}
-        />
-        <Field
-          label="Mobile number"
-          required
-          icon={<LuPhone />}
-          error={errors.mobileNumber}
-          registration={register("mobileNumber")}
-          placeholder="09XXXXXXXXX"
-          maxLength={20}
-        />
-        <Field
-          label="Employee number"
-          required
-          icon={<LuHash />}
-          error={errors.employeeNo}
-          registration={register("employeeNo")}
-          maxLength={40}
-        />
-        <Field
-          label="Email"
-          required
-          type="email"
-          icon={<LuMail />}
-          error={errors.email}
-          registration={register("email")}
-          onBlur={onEmailBlur}
-          maxLength={254}
-          hint={
-            emailTaken === true
-              ? "That email is already registered."
-              : emailTaken === false
-                ? "That email is available."
-                : null
-          }
-          hintTone={emailTaken === true ? "bad" : "good"}
-        />
-      </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              label="First name"
+              required
+              icon={<FiUser />}
+              error={errors.firstName}
+              registration={register("firstName")}
+              maxLength={60}
+            />
+            <Field
+              label="Middle name"
+              icon={<FiUser />}
+              error={errors.middleName}
+              registration={register("middleName")}
+              maxLength={60}
+            />
+            <Field
+              label="Last name"
+              required
+              icon={<FiUser />}
+              error={errors.lastName}
+              registration={register("lastName")}
+              maxLength={60}
+            />
+            <Field
+              label="Suffix"
+              icon={<FiUser />}
+              error={errors.suffix}
+              registration={register("suffix")}
+              placeholder="Jr., III"
+              maxLength={20}
+            />
+          </div>
+        </div>
+      ) : null}
 
-      {codeFields.region || codeFields.group || codeFields.branch ? (
+      {step.id === "contact" ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field
+            label="Birthday"
+            required
+            type="date"
+            icon={<LuCalendar />}
+            error={errors.birthday}
+            registration={register("birthday")}
+            // Greys out the impossible dates in the native picker. The schema
+            // still checks the same bounds -- these attributes only constrain
+            // the picker, and a typed or pasted date walks straight past them.
+            min={birthdayMin}
+            max={birthdayMax}
+          />
+          <Field
+            label="Mobile number"
+            required
+            icon={<LuPhone />}
+            error={errors.mobileNumber}
+            registration={register("mobileNumber")}
+            placeholder="09XXXXXXXXX"
+            maxLength={20}
+          />
+          <Field
+            label="Employee number"
+            required
+            icon={<LuHash />}
+            error={errors.employeeNo}
+            registration={register("employeeNo")}
+            maxLength={40}
+          />
+          <Field
+            label="Email"
+            required
+            type="email"
+            icon={<LuMail />}
+            error={errors.email}
+            registration={register("email")}
+            onBlur={onEmailBlur}
+            maxLength={254}
+            hint={
+              emailTaken === true
+                ? "That email is already registered."
+                : emailTaken === false
+                  ? "That email is available."
+                  : null
+            }
+            hintTone={emailTaken === true ? "bad" : "good"}
+          />
+        </div>
+      ) : null}
+
+      {step.id === "location" ? (
         <div className="grid gap-4 sm:grid-cols-2">
           {codeFields.region ? (
             <SelectField
@@ -277,20 +311,47 @@ export function RegisterForm({
               }))}
             />
           ) : null}
+
+          <p className="text-xs text-muted-foreground sm:col-span-2">
+            This is how we find the person who approves you — not the area you
+            will cover. That is assigned after your account is approved.
+          </p>
         </div>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="cursor-pointer rounded-sm bg-indigo-950 px-3 py-2 text-sm text-primary-foreground disabled:opacity-50 flex justify-center items-center gap-2"
-      >
-        <LuUserPlus />
-        {isPending ? "Submitting…" : "Create account"}
-      </button>
+      <div className="flex items-center gap-3">
+        {!isFirstStep ? (
+          <button
+            type="button"
+            onClick={onBack}
+            className="cursor-pointer rounded-sm border border-input px-3 py-2 text-sm flex justify-center items-center gap-2"
+          >
+            <LuArrowLeft />
+            Back
+          </button>
+        ) : null}
 
-      <div className="flex justify-center items-center">
-        <p className="text-xs">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="cursor-pointer flex-1 rounded-sm bg-indigo-950 px-3 py-2 text-sm text-primary-foreground disabled:opacity-50 flex justify-center items-center gap-2"
+        >
+          {isLastStep ? <LuUserPlus /> : null}
+          {isLastStep ? (isPending ? "Submitting…" : "Create account") : "Next"}
+        </button>
+      </div>
+
+      <div className="flex flex-col justify-center items-center gap-1 text-xs">
+        <p>
+          Not {tenantLabel}?{" "}
+          <Link
+            to={changeTenantPath}
+            className="font-bold hover:text-[#157d03]"
+          >
+            Change company
+          </Link>
+        </p>
+        <p>
           Already have an account?{" "}
           <Link to={paths.login} className="font-bold hover:text-[#157d03]">
             Sign In
