@@ -23,6 +23,12 @@
  *   identifier    What they signed in as, so they can tell it is the right
  *                 account. This is the value that must reach the API
  *                 unchanged; the container sends it, not this form.
+ *   expiresAt     Epoch ms when the code dies, for the counter beside the
+ *                 label. It is the BROWSER's estimate of a SERVER deadline --
+ *                 see the warning in hooks/useCountdown.js. Reaching zero does
+ *                 not disable anything: the backend checks expiry before it
+ *                 counts a wrong attempt, so submitting a dead code costs
+ *                 nothing and returns a clearer message than we could write.
  *   onStartOver   Goes back to the password step.
  *
  * The boxes come from <OtpInput>, which owns the focus, keyboard and paste
@@ -48,6 +54,7 @@
  * in a response body.
  */
 import { OtpInput } from "@/components/OtpInput";
+import { useCountdown } from "@/hooks/useCountdown";
 
 export function OtpForm({
   otpValue,
@@ -57,8 +64,10 @@ export function OtpForm({
   isPending,
   onSubmit,
   identifier,
+  expiresAt,
   onStartOver,
 }) {
+  const countdown = useCountdown(expiresAt);
   return (
     <form
       onSubmit={onSubmit}
@@ -66,9 +75,10 @@ export function OtpForm({
     >
       <div className="flex flex-col justify-center items-center">
         <h1 className="text-lg font-semibold">Enter your code</h1>
+        {/* "It expires in 5 minutes" was dropped from this line: the counter
+            beside the label below now says the same thing, and says it live. */}
         <p className="mt-1 text-center text-xs text-muted-foreground">
-          We emailed a code to the address on <strong>{identifier}</strong>. It expires in 5
-          minutes.
+          We emailed a code to the address on <strong>{identifier}</strong>.
         </p>
       </div>
 
@@ -84,7 +94,21 @@ export function OtpForm({
       {/* A <div> rather than a <label>: a label points at ONE control, and
           there are six here. Each box carries its own "Digit 3 of 6" label. */}
       <div className="flex flex-col gap-1 text-sm">
-        <span id="otp-label">Verification code *</span>
+        <div className="flex justify-between items-center">
+          <span id="otp-label">Verification code *</span>
+          {/* role="timer" without aria-live: a region that announced itself
+              every second would talk over everything else on the screen. */}
+          <span
+            role="timer"
+            className={
+              countdown.isExpired
+                ? "text-xs text-destructive"
+                : "text-xs text-muted-foreground tabular-nums"
+            }
+          >
+            {countdown.isExpired ? "Code expired" : `Expires in ${countdown.formatted}`}
+          </span>
+        </div>
         <div
           role="group"
           aria-labelledby="otp-label"

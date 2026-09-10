@@ -2,7 +2,7 @@ import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Navigate, useLocation, useNavigate } from 'react-router'
 
-import { isOtpExpired } from '@/lib/datetime'
+import { OTP_TTL_MS, isOtpExpired } from '@/lib/datetime'
 import { clearOtpChallenge, readOtpChallenge } from '@/lib/session'
 import { paths } from '@/routes/paths'
 
@@ -75,6 +75,11 @@ export function VerifyOtpPage() {
           isPending={verifyMutation.isPending}
           onSubmit={onSubmit}
           identifier={challenge.identifier}
+          // The guard above runs on render, so it catches a stale challenge on
+          // ARRIVAL. It does not fire again while the user sits here, which is
+          // deliberate: expiring in place and letting them press Start over
+          // beats yanking them back to the password screen mid-keystroke.
+          expiresAt={new Date(challenge.startedAt).getTime() + OTP_TTL_MS}
           onStartOver={() => {
             clearOtpChallenge()
             navigate(paths.login, { replace: true, state: { from } })
