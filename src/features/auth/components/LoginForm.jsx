@@ -77,6 +77,9 @@ export function LoginForm({
             {...register("identifier")}
             autoComplete="username"
             placeholder="Employee Number or UserCode"
+            // 254, the maximum length of an email address -- not the 20 used
+            // on the password, which real addresses run past easily.
+            maxLength={254}
             autoFocus
             className=" border text-xs border-none px-3 py-2 w-full focus:outline-none focus:ring-0"
           />
@@ -104,6 +107,10 @@ export function LoginForm({
             type={isPasswordVisible ? "text" : "password"}
             autoComplete="current-password"
             placeholder="******"
+            // Matches the schema. Note this stops typing silently -- there is
+            // no error for hitting a maxLength -- so the schema keeps the same
+            // 20 as a backstop for anything pasted around it.
+            maxLength={20}
             className="bg-transparent border text-xs border-none px-3 py-2 w-full focus:outline-none focus:ring-0"
           />
           {/* type="button" matters: a bare <button> inside a form defaults to
