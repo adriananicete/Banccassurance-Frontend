@@ -24,3 +24,43 @@ export async function fetchScope() {
   const { data } = await apiClient.get('/users/scope')
   return data.data
 }
+
+/**
+ * GET /users/check-email?email= -> { exists }
+ *
+ * ⚠️ NO `success` KEY, and no `data`. One of the handful of endpoints that
+ * does not use the common envelope.
+ *
+ * Unauthenticated -- registration needs it before a session exists. A missing
+ * param answers `{ exists: false }` rather than a 400, so an empty string here
+ * reads as "available" when it means "not asked". Only call it with an address
+ * that has already passed shape validation.
+ *
+ * This is a courtesy, not a gate: POST /users/register answers 409 for a taken
+ * address regardless, and between this check and that submit someone else can
+ * register it.
+ */
+export async function checkEmail(email) {
+  const { data } = await apiClient.get('/users/check-email', { params: { email } })
+  return Boolean(data.exists)
+}
+
+/**
+ * POST /users/register -> { success, message, userCode }
+ *
+ * Unauthenticated. Answers 200, not 201.
+ *
+ * ⚠️ WHICH CODE FIELD TO SEND DEPENDS ON THE ROLE, and sending a forbidden one
+ * is a 400 naming it. The caller must build the payload from the matrix in
+ * constants/roles.js -- see buildRegistrationPayload in ./schemas.js.
+ *
+ * ⚠️ NO PASSWORD IS SENT OR CHOSEN. The backend generates one
+ * (`crypto.randomBytes(12).toString('base64url')`, 16 characters) and emails
+ * it once. It is stored nowhere else, so a login that fails on an
+ * app-created account is almost always the password rather than the
+ * identifier.
+ */
+export async function register(payload) {
+  const { data } = await apiClient.post('/users/register', payload)
+  return data
+}

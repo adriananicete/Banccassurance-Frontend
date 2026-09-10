@@ -13,6 +13,8 @@ import {
 import { AuthLayoutRoute } from '@/features/auth/pages/AuthLayoutRoute'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { VerifyOtpPage } from '@/features/auth/pages/VerifyOtpPage'
+import { ChooseTenantPage } from '@/features/users/pages/ChooseTenantPage'
+import { RegisterPage } from '@/features/users/pages/RegisterPage'
 import { GuestOnly } from '@/routes/GuestOnly'
 import { RequireAuth } from '@/routes/RequireAuth'
 import { RequireRole } from '@/routes/RequireRole'
@@ -59,25 +61,11 @@ export const router = createBrowserRouter([
         children: [
           { path: paths.login, element: <LoginPage /> },
           { path: paths.loginVerify, element: <VerifyOtpPage /> },
-          {
-            // Sitting inside the auth card is temporary: registration is a
-            // long form and will want its own width. Move it out of this
-            // layout when the screen is designed.
-            path: paths.register,
-            element: (
-              <NotBuiltYet
-                title="Register"
-                note="Public — it runs before any session exists. Which code field to send depends on the role, and sending a forbidden one is a 400."
-                endpoints={[
-                  'GET /users/check-email',
-                  'GET /lookups/regions',
-                  'GET /lookups/groups',
-                  'GET /lookups/branches',
-                  'POST /users/register',
-                ]}
-              />
-            ),
-          },
+          // Registration is two steps, and the company sits in the URL rather
+          // than in state: the back button returns to the chooser, and a
+          // reload of a half-filled form does not lose which company it is.
+          { path: paths.register, element: <ChooseTenantPage /> },
+          { path: paths.registerFor(':tenant'), element: <RegisterPage /> },
         ],
       },
     ],

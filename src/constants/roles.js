@@ -106,6 +106,52 @@ export const REGISTERABLE_ROLES = [
 ]
 
 /**
+ * The eight, split by company.
+ *
+ * The tenant is not a field anyone sends -- the backend derives it from the
+ * role and stamps it into the UserCode prefix. These lists exist so the
+ * registration screen can ask which company someone belongs to first and then
+ * offer four roles instead of eight.
+ */
+export const LANDBANK_REGISTERABLE_ROLES = [
+  ROLES.BRANCH_STAFF,
+  ROLES.BRANCH_HEAD,
+  ROLES.GROUP_HEAD,
+  ROLES.SECTOR_HEAD,
+]
+
+export const PHILLIFE_REGISTERABLE_ROLES = [
+  ROLES.ACCOUNT_OFFICER,
+  ROLES.AREA_SALES_HEAD,
+  ROLES.REGIONAL_SALES_HEAD,
+  ROLES.DEPARTMENT_HEAD,
+]
+
+/**
+ * The slugs the registration URL uses, and what each means.
+ *
+ * `SYS` is deliberately absent: a superadmin is seeded, never registered, and
+ * POST /users/register answers 400 for it.
+ */
+export const TENANT_SLUGS = {
+  landbank: TENANTS.LANDBANK,
+  phillife: TENANTS.PHILLIFE,
+}
+
+export const TENANT_LABELS = {
+  [TENANTS.LANDBANK]: 'Landbank',
+  [TENANTS.PHILLIFE]: 'PhilLife',
+  [TENANTS.SYSTEM]: 'System',
+}
+
+/** The roles someone at this tenant may register as. Empty for anything else. */
+export function registerableRolesForTenant(tenant) {
+  if (tenant === TENANTS.LANDBANK) return LANDBANK_REGISTERABLE_ROLES
+  if (tenant === TENANTS.PHILLIFE) return PHILLIFE_REGISTERABLE_ROLES
+  return []
+}
+
+/**
  * Which code field each role sends at registration. Sending a forbidden one is
  * a 400. Mirrors context/BACKEND.md section 6 -- schemas/register.js enforces it.
  *

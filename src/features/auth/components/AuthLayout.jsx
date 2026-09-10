@@ -16,7 +16,10 @@ import logo from "../../../assets/PhilLife-Color.png";
  */
 export function AuthLayout({ children }) {
   return (
-    <div className="w-full h-dvh flex flex-col justify-center items-center p-3 gap-10">
+    // min-h-dvh, not h-dvh: the registration form is taller than a phone
+    // screen, and a fixed height clips it with nothing to scroll. Centred
+    // exactly as before whenever the content fits.
+    <div className="w-full min-h-dvh flex flex-col justify-center items-center p-3 gap-10">
       <div className="w-full h-[50px] flex flex-col justify-center items-center">
         <div className="text-xs font-bold flex justify-start items-start">
           <img src={logo} width={200} alt="phillife-logo" />

@@ -68,7 +68,7 @@ export function LoginForm({
       ) : null}
 
       <label className="flex flex-col gap-1 text-sm">
-        <span>Employee number *</span>
+        <span className="text-xs">Employee number *</span>
         <div className="border flex">
           <div className="flex justify-center items-center px-2">
             <FiUser />
@@ -77,6 +77,11 @@ export function LoginForm({
             {...register("identifier")}
             autoComplete="username"
             placeholder="Employee Number or UserCode"
+            // This field is the IDENTIFIER, not just the employee number: it
+            // also takes a user code and an email, which is why its cap is
+            // separate from the password's 30. At 40 a long work address gets
+            // cut off mid-typing with no error -- see the note in schemas.js.
+            maxLength={40}
             autoFocus
             className=" border text-xs border-none px-3 py-2 w-full focus:outline-none focus:ring-0"
           />
@@ -89,7 +94,7 @@ export function LoginForm({
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
-        <span>Password *</span>
+        <span className="text-xs">Password *</span>
         {/* Same shape as the identifier row above: the row stretches its
             children to full height, and each icon wrapper centres its own
             icon. Putting items-center on the row instead shrinks the wrappers
@@ -104,6 +109,10 @@ export function LoginForm({
             type={isPasswordVisible ? "text" : "password"}
             autoComplete="current-password"
             placeholder="******"
+            // Matches the schema. Note this stops typing silently -- there is
+            // no error for hitting a maxLength -- so the schema keeps the same
+            // 30 as a backstop for anything pasted around it.
+            maxLength={30}
             className="bg-transparent border text-xs border-none px-3 py-2 w-full focus:outline-none focus:ring-0"
           />
           {/* type="button" matters: a bare <button> inside a form defaults to
@@ -136,7 +145,7 @@ export function LoginForm({
 
       <div className="flex justify-center items-center">
         <p className="text-xs">
-          Don't have an account yet? <Link to={paths.register}>Sign Up</Link>
+          Don't have an account yet? <Link to={paths.register} className="font-bold hover:text-[#157d03]">Sign Up</Link>
         </p>
       </div>
     </form>
