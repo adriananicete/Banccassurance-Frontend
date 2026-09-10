@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Navigate, useLocation, useNavigate } from 'react-router'
 
@@ -26,8 +26,14 @@ export function VerifyOtpPage() {
 
   const challenge = readOtpChallenge()
 
+  /**
+   * `control` rather than `register`: the code is entered across six boxes
+   * that together hold one value, so the field is controlled. OtpForm receives
+   * the whole string and hands back the whole string -- it never deals in
+   * single digits, and neither does the schema.
+   */
   const {
-    register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm({
@@ -57,17 +63,24 @@ export function VerifyOtpPage() {
   })
 
   return (
-    <OtpForm
-      register={register}
-      errors={errors}
-      serverError={verifyMutation.error?.message ?? null}
-      isPending={verifyMutation.isPending}
-      onSubmit={onSubmit}
-      identifier={challenge.identifier}
-      onStartOver={() => {
-        clearOtpChallenge()
-        navigate(paths.login, { replace: true, state: { from } })
-      }}
+    <Controller
+      name="otp"
+      control={control}
+      render={({ field }) => (
+        <OtpForm
+          otpValue={field.value}
+          onOtpChange={field.onChange}
+          errors={errors}
+          serverError={verifyMutation.error?.message ?? null}
+          isPending={verifyMutation.isPending}
+          onSubmit={onSubmit}
+          identifier={challenge.identifier}
+          onStartOver={() => {
+            clearOtpChallenge()
+            navigate(paths.login, { replace: true, state: { from } })
+          }}
+        />
+      )}
     />
   )
 }

@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  THIS FILE IS YOURS. Still a placeholder -- replace it with your design.
+ *  THIS FILE IS YOURS.
  * ============================================================================
  *
  * Presentational. `pages/VerifyOtpPage.jsx` supplies every prop.
@@ -14,7 +14,8 @@
  *
  * The props contract:
  *
- *   register      react-hook-form's register. One field: `otp`.
+ *   otpValue      The code so far, as a string. May be shorter than six.
+ *   onOtpChange   Called with the WHOLE string, never one digit.
  *   errors        errors.otp?.message
  *   serverError   A string or null -- a wrong or expired code. Show as given.
  *   isPending     True while the code is being checked.
@@ -24,6 +25,14 @@
  *                 unchanged; the container sends it, not this form.
  *   onStartOver   Goes back to the password step.
  *
+ * The boxes come from <OtpInput>, which owns the focus, keyboard and paste
+ * behaviour so that restyling here cannot break it. `boxClassName` styles one
+ * box and `className` styles the row -- both are yours.
+ *
+ * SIX BOXES, DIGITS ONLY. The backend generates the code as an integer from
+ * 100000 to 999999, so it is always six digits with no leading zero, and it is
+ * compared with a strict string match. See the note in components/OtpInput.jsx.
+ *
  * THERE IS NO "RESEND CODE".
  * The only endpoint that sends an OTP is POST /auth/login-step1, and it needs
  * the password -- which this app never stores. So the honest action is to go
@@ -31,11 +40,18 @@
  * "Back to sign in", never "Resend": that would promise something this screen
  * cannot do.
  *
- * The code lasts 5 minutes and allows 5 attempts. In development it is printed
- * to the backend's own console -- it is never in a response body.
+ * The code lasts 5 minutes and allows 5 wrong attempts. On the fifth the
+ * backend DISCARDS it, so the only way forward is to start over -- the message
+ * it sends says exactly that, and it is shown as given.
+ *
+ * In development the code is printed to the backend's own console. It is never
+ * in a response body.
  */
+import { OtpInput } from "@/components/OtpInput";
+
 export function OtpForm({
-  register,
+  otpValue,
+  onOtpChange,
   errors,
   serverError,
   isPending,
@@ -65,21 +81,29 @@ export function OtpForm({
         </p>
       ) : null}
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span>Verification code *</span>
-        <div className="border flex">
-          <input
-            {...register("otp")}
-            autoComplete="one-time-code"
-            inputMode="numeric"
+      {/* A <div> rather than a <label>: a label points at ONE control, and
+          there are six here. Each box carries its own "Digit 3 of 6" label. */}
+      <div className="flex flex-col gap-1 text-sm">
+        <span id="otp-label">Verification code *</span>
+        <div
+          role="group"
+          aria-labelledby="otp-label"
+          className="w-full h-[100px] border flex justify-center items-center"
+        >
+          <OtpInput
+            length={6}
+            value={otpValue}
+            onChange={onOtpChange}
+            hasError={Boolean(errors.otp)}
+            disabled={isPending}
             autoFocus
-            className="border text-xs border-none px-3 py-2 w-full tracking-widest focus:outline-none focus:ring-0"
+            boxClassName="size-10 border rounded-sm text-sm focus:border-indigo-950"
           />
         </div>
         {errors.otp ? (
           <span className="text-xs text-destructive">{errors.otp.message}</span>
         ) : null}
-      </label>
+      </div>
 
       <button
         type="submit"

@@ -90,8 +90,13 @@ export function LoginForm({
 
       <label className="flex flex-col gap-1 text-sm">
         <span>Password *</span>
-        <div className="border flex justify-center items-center px-2">
-          <div>
+        {/* Same shape as the identifier row above: the row stretches its
+            children to full height, and each icon wrapper centres its own
+            icon. Putting items-center on the row instead shrinks the wrappers
+            to the icon's own height, so they float and the eye button becomes
+            a ~14px tap target. */}
+        <div className="border flex">
+          <div className="flex justify-center items-center px-2">
             <CiLock />
           </div>
           <input
@@ -109,7 +114,7 @@ export function LoginForm({
             aria-label={isPasswordVisible ? "Hide password" : "Show password"}
             className="flex justify-center items-center px-2 cursor-pointer"
           >
-            {isPasswordVisible ? <LuEyeOff /> : <LuEye />}
+            {isPasswordVisible ? <LuEye /> : <LuEyeOff />}
           </button>
         </div>
         {errors.password ? (

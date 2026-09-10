@@ -25,12 +25,25 @@ export const loginStep1Schema = z.object({
 
 export const verifyOtpSchema = z.object({
   /**
-   * No length or character rule here on purpose: the API documents the OTP's
-   * lifetime (5 minutes) and attempt limit (5), but not its format. Guessing
-   * six digits would refuse a valid code if it is ever anything else, and the
-   * server checks it properly either way.
+   * Exactly six digits.
+   *
+   * This was previously left unconstrained because BACKEND.md documents the
+   * code's lifetime and attempt limit but not its shape. It is now read from
+   * the backend source rather than assumed:
+   *
+   *   const generateOtp = () => crypto.randomInt(100000, 1000000).toString()
+   *
+   * That is an integer from 100000 to 999999 -- always six digits, never a
+   * leading zero -- and it is checked with `!==`, a strict string comparison
+   * with no trimming. So six digits is the whole rule.
+   *
+   * Worth catching here rather than sending: a short code costs the user one
+   * of only five attempts, and the fifth discards the code entirely.
    */
-  otp: z.string().trim().min(1, 'Enter the code sent to your email.'),
+  otp: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, 'Enter all 6 digits of the code.'),
 })
 
 export const changePasswordSchema = z
