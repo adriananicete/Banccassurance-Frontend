@@ -1,6 +1,11 @@
 import { z } from 'zod'
 
 import { REGISTERABLE_ROLES, REGISTRATION_FIELDS } from '@/constants/roles'
+import { manilaDayYearsAgo, manilaToday } from '@/lib/datetime'
+
+/** Both are this form's rules. The API imposes neither -- see the superRefine. */
+export const MINIMUM_AGE = 18
+export const MAXIMUM_AGE = 70
 
 /**
  * A MIRROR OF THE BACKEND'S OWN REGEX, copied from src/utils/validators.js:
@@ -52,17 +57,9 @@ export const registerSchema = z
     lastName: z.string().trim().min(1, 'Last name is required.').max(60, 'That is too long.'),
     suffix: z.string().trim().max(20, 'That is too long.'),
 
-    // No format rule: the backend checks presence only, and a date input
-    // already hands over YYYY-MM-DD.
-    birthday: z
-      .string()
-      .min(1, 'Birthday is required.')
-      // Ours, not the API's. A birthday after today is a typo every time --
-      // usually a mistyped year -- and it is cheaper to catch here than to
-      // find later in a record nobody re-reads.
-      .refine((value) => value <= new Date().toISOString().slice(0, 10), {
-        message: 'Birthday cannot be in the future.',
-      }),
+    // Presence only here; the age bounds are in the superRefine below, where
+    // they can be computed fresh rather than frozen at module load.
+    birthday: z.string().min(1, 'Birthday is required.'),
 
     // Left deliberately loose. The backend imposes no format, and Philippine
     // numbers are written 09171234567, +639171234567 and 0917 123 4567 by
@@ -94,6 +91,53 @@ export const registerSchema = z
     regionCode: z.string(),
   })
   .superRefine((values, ctx) => {
+    /**
+     * AGE BOUNDS ARE THIS FORM'S RULE, NOT THE API'S. The backend checks that
+     * `birthday` is present and nothing else -- no format, no age. So a direct
+     * call to POST /users/register bypasses all of this, and if the backend
+     * ever adds its own bounds the two can disagree silently. Raised with the
+     * backend side; until then, treat it as a typo-catcher rather than a
+     * guarantee.
+     *
+     * Both boundaries are Adrian's decision. Watch the inequalities: an
+     * EARLIER birthday means an OLDER person.
+     *
+     *   at least 18   birthday <= 18 years ago. The 18th birthday itself
+     *                 passes -- 18 is the age of majority and the general
+     *                 minimum for regular employment here.
+     *   at most 70    birthday > 71 years ago. Someone aged 70 years and six
+     *                 months is still 70, so the cutoff is the 71st birthday,
+     *                 not the 70th.
+     *
+     * ⚠️ The upper bound can refuse a real person. Consultants and officers
+     * past 70 exist, and nothing in the backend supports this limit -- it was
+     * chosen to catch a mistyped year. If a genuine registration is ever
+     * turned away, this is why.
+     */
+    if (values.birthday) {
+      const today = manilaToday()
+
+      if (values.birthday > today) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['birthday'],
+          message: 'Birthday cannot be in the future.',
+        })
+      } else if (values.birthday > manilaDayYearsAgo(MINIMUM_AGE)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['birthday'],
+          message: `You must be at least ${MINIMUM_AGE} years old to register.`,
+        })
+      } else if (values.birthday <= manilaDayYearsAgo(MAXIMUM_AGE + 1)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['birthday'],
+          message: `Check the year — that is over ${MAXIMUM_AGE} years old.`,
+        })
+      }
+    }
+
     const rule = REGISTRATION_FIELDS[values.role]
     if (!rule) return
 

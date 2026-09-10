@@ -8,7 +8,15 @@ import { useBranches, useGroups, useRegions } from '@/features/lookups/hooks'
 import { RegisterForm } from '../components/RegisterForm'
 import { RegisterSuccess } from '../components/RegisterSuccess'
 import { useCheckEmail, useRegisterUser } from '../hooks'
-import { buildRegistrationPayload, registerSchema, visibleCodeFields } from '../schemas'
+import { manilaDayYearsAgo } from '@/lib/datetime'
+
+import {
+  MAXIMUM_AGE,
+  MINIMUM_AGE,
+  buildRegistrationPayload,
+  registerSchema,
+  visibleCodeFields,
+} from '../schemas'
 
 const ROLE_OPTIONS = REGISTERABLE_ROLES.map((role) => ({
   value: role,
@@ -125,6 +133,12 @@ export function RegisterPage() {
       // "not asked" from "available".
       emailTaken={emailQuery.data ?? null}
       onEmailBlur={(event) => setEmailToCheck(event.target.value.trim())}
+      // The picker's own bounds. `min` is a day more permissive than the
+      // schema at the far end, which is the safe direction: the schema is the
+      // one that decides, and a native constraint that refuses first would
+      // give no message at all.
+      birthdayMin={manilaDayYearsAgo(MAXIMUM_AGE + 1)}
+      birthdayMax={manilaDayYearsAgo(MINIMUM_AGE)}
     />
   )
 }

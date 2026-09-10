@@ -37,6 +37,12 @@
  *                   409 for a taken address regardless.
  *   onEmailBlur     Fires the check.
  *
+ *   birthdayMin / birthdayMax
+ *                   YYYY-MM-DD bounds for the date picker, from the age rules
+ *                   in schemas.js. They only grey out dates in the picker --
+ *                   a typed or pasted date ignores them, so the schema checks
+ *                   the same bounds again.
+ *
  * WHAT THE USER PICKS HERE IS THEIR APPROVER'S SCOPE, NOT THEIR OWN. An
  * Account Officer choosing a group is naming whose queue they land in; the
  * branches they will cover are assigned afterwards by that Area Sales Head.
@@ -74,6 +80,8 @@ export function RegisterForm({
   hasGroupSelected,
   emailTaken,
   onEmailBlur,
+  birthdayMin,
+  birthdayMax,
 }) {
   return (
     <form
@@ -153,6 +161,11 @@ export function RegisterForm({
           icon={<LuCalendar />}
           error={errors.birthday}
           registration={register("birthday")}
+          // Greys out the impossible dates in the native picker. The schema
+          // still checks the same bounds -- these attributes only constrain
+          // the picker, and a typed or pasted date walks straight past them.
+          min={birthdayMin}
+          max={birthdayMax}
         />
         <Field
           label="Mobile number"

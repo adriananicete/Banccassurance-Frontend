@@ -90,6 +90,29 @@ export function manilaToday() {
   return toManilaDay(new Date())
 }
 
+/**
+ * The same Manila calendar day, N years earlier, as `YYYY-MM-DD`.
+ *
+ * Age boundaries are calendar arithmetic, so this subtracts from the year of
+ * the Manila date string rather than shifting a Date object. Doing it on a
+ * Date would apply the shift to a UTC instant, which is the wrong day for
+ * eight hours out of every twenty-four here.
+ *
+ * A 29 February input can produce a date that does not exist in the target
+ * year. That is fine and deliberate: these strings are only ever compared
+ * lexicographically against other `YYYY-MM-DD` values, never parsed, and the
+ * comparison lands where you would want it to.
+ *
+ * To compare an age, remember which way the inequality runs: an EARLIER
+ * birthday means an OLDER person.
+ *   at least 18   ->  birthday <= manilaDayYearsAgo(18)
+ *   at most 70    ->  birthday >  manilaDayYearsAgo(71)
+ */
+export function manilaDayYearsAgo(years) {
+  const [year, month, day] = manilaToday().split('-')
+  return `${Number(year) - years}-${month}-${day}`
+}
+
 const relativeFormatter = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
 
 const RELATIVE_UNITS = [
