@@ -61,14 +61,24 @@ export const registerSchema = z
     // they can be computed fresh rather than frozen at module load.
     birthday: z.string().min(1, 'Birthday is required.'),
 
-    // Left deliberately loose. The backend imposes no format, and Philippine
-    // numbers are written 09171234567, +639171234567 and 0917 123 4567 by
-    // different people -- a pattern here would refuse two of the three.
+    /**
+     * Digits only, up to 15. Adrian's decision; the backend imposes neither.
+     *
+     * ⚠️ THIS REFUSES THE +63 FORM. Philippine numbers get written
+     * 09171234567, +639171234567 and 0917 123 4567 by different people, and
+     * only the first survives this rule. The form strips non-digits as the
+     * user types, so a pasted `+63 917 123 4567` becomes `639171234567`
+     * rather than being rejected -- but a leading `+` is gone either way.
+     *
+     * 15 is also the E.164 maximum for any international number, so nothing
+     * legitimate is longer.
+     */
     mobileNumber: z
       .string()
       .trim()
       .min(1, 'Mobile number is required.')
-      .max(20, 'That is too long.'),
+      .regex(/^\d+$/, 'Numbers only.')
+      .max(15, 'Up to 15 digits.'),
 
     employeeNo: z
       .string()

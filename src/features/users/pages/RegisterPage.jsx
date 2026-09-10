@@ -104,6 +104,9 @@ export function RegisterPage() {
   const role = useWatch({ control, name: 'role' })
   const groupCode = useWatch({ control, name: 'groupCode' })
 
+  const registerMutation = useRegisterUser()
+  const { reset: clearServerError } = registerMutation
+
   /** Which of group / branch / region this role may send. */
   const codeFields = visibleCodeFields(role)
 
@@ -127,7 +130,18 @@ export function RegisterPage() {
     setValue('groupCode', '')
     setValue('branchCode', '')
     setValue('regionCode', '')
-  }, [role, setValue])
+
+    /**
+     * A server error describes the payload that was SENT, so changing the
+     * role makes it stale -- and stale here is actively wrong.
+     *
+     * The case that showed it: registering as Department Head answers 409,
+     * "The Department Head role is limited to 1 account…". Switching to
+     * Account Officer left that message on screen, still naming a role the
+     * user had already abandoned, with nothing to say it no longer applied.
+     */
+    clearServerError()
+  }, [role, setValue, clearServerError])
 
   /** A branch belongs to one group, so changing the group invalidates it. */
   useEffect(() => {
@@ -141,8 +155,6 @@ export function RegisterPage() {
    */
   const [emailToCheck, setEmailToCheck] = useState('')
   const emailQuery = useCheckEmail(emailToCheck)
-
-  const registerMutation = useRegisterUser()
 
   /**
    * Drop the location step when this role sends none of the three codes.
@@ -213,7 +225,12 @@ export function RegisterPage() {
       stepCount={activeSteps.length}
       isFirstStep={safeIndex === 0}
       isLastStep={isLastStep}
-      onBack={() => setStepIndex(Math.max(0, safeIndex - 1))}
+      // Going back is the user starting to fix something, so the error from
+      // the last attempt stops being true the moment they do.
+      onBack={() => {
+        clearServerError()
+        setStepIndex(Math.max(0, safeIndex - 1))
+      }}
       register={register}
       errors={errors}
       onSubmit={onSubmit}

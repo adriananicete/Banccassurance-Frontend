@@ -224,7 +224,12 @@ export function RegisterForm({
             error={errors.mobileNumber}
             registration={register("mobileNumber")}
             placeholder="09XXXXXXXXX"
-            maxLength={20}
+            // inputMode brings up the numeric keypad on a phone; it does not
+            // stop a keyboard typing letters, which is what `transform` is
+            // for. maxLength caps typing and pasting alike.
+            inputMode="numeric"
+            maxLength={15}
+            transform={onlyDigits}
           />
           <Field
             label="Employee number"
@@ -363,6 +368,9 @@ export function RegisterForm({
 /* The two row shapes, held once                                               */
 /* -------------------------------------------------------------------------- */
 
+/** Strips everything that is not a digit. Used by the mobile number field. */
+const onlyDigits = (value) => value.replace(/\D/g, "");
+
 function Field({
   label,
   required = false,
@@ -372,6 +380,7 @@ function Field({
   hint,
   hintTone = "good",
   onBlur,
+  transform,
   ...inputProps
 }) {
   return (
@@ -383,9 +392,18 @@ function Field({
         <div className="flex justify-center items-center px-2">{icon}</div>
         <input
           {...registration}
-          // react-hook-form's registration carries its own onBlur, so an extra
-          // one has to call it rather than replace it -- dropping it would
-          // stop the field ever being marked as touched.
+          // react-hook-form's registration carries its own onBlur and
+          // onChange, so extras have to CALL them rather than replace them --
+          // dropping onChange stops the field updating at all.
+          //
+          // `transform` rewrites the value before RHF reads it, so what the
+          // user sees and what the form holds never diverge. Rejecting a
+          // stray character afterwards would leave it on screen with an error
+          // beside it, which is worse than never accepting it.
+          onChange={(event) => {
+            if (transform) event.target.value = transform(event.target.value);
+            registration.onChange(event);
+          }}
           onBlur={(event) => {
             registration.onBlur(event);
             onBlur?.(event);
