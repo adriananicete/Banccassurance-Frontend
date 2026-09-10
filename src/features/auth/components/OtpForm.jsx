@@ -97,7 +97,7 @@ export function OtpForm({
             hasError={Boolean(errors.otp)}
             disabled={isPending}
             autoFocus
-            boxClassName="size-12 border border-neutral-400 rounded-sm text-base focus:border-indigo-950"
+            boxClassName="w-12 h-14 border border-neutral-400 rounded-sm text-base focus:border-indigo-950"
           />
         </div>
         {errors.otp ? (
