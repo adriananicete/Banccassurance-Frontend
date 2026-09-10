@@ -68,7 +68,7 @@ export function LoginForm({
       ) : null}
 
       <label className="flex flex-col gap-1 text-sm">
-        <span>Employee number *</span>
+        <span className="text-xs">Employee number *</span>
         <div className="border flex">
           <div className="flex justify-center items-center px-2">
             <FiUser />
@@ -77,9 +77,11 @@ export function LoginForm({
             {...register("identifier")}
             autoComplete="username"
             placeholder="Employee Number or UserCode"
-            // 254, the maximum length of an email address -- not the 30 used
-            // on the password, which real addresses run past easily.
-            maxLength={254}
+            // This field is the IDENTIFIER, not just the employee number: it
+            // also takes a user code and an email, which is why its cap is
+            // separate from the password's 30. At 40 a long work address gets
+            // cut off mid-typing with no error -- see the note in schemas.js.
+            maxLength={40}
             autoFocus
             className=" border text-xs border-none px-3 py-2 w-full focus:outline-none focus:ring-0"
           />
@@ -92,7 +94,7 @@ export function LoginForm({
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-sm">Password *</span>
+        <span className="text-xs">Password *</span>
         {/* Same shape as the identifier row above: the row stretches its
             children to full height, and each icon wrapper centres its own
             icon. Putting items-center on the row instead shrinks the wrappers

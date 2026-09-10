@@ -16,9 +16,16 @@ export const loginStep1Schema = z.object({
    * beyond a length ceiling -- rejecting anything that is not an email here
    * would refuse two of the three valid ways to sign in.
    *
-   * 254 is the maximum length of an email address. It is deliberately NOT the
-   * 30 used on the password below: real addresses run past 30 easily, so that
-   * ceiling would refuse one of the three ways in.
+   * 40 is Adrian's decision, and it is a ceiling this form invents -- the API
+   * imposes none. It clears a user code (`USR-STF-00001`, 13) with room to
+   * spare, and it clears most work addresses.
+   *
+   * ⚠️ It does NOT clear every email. `maria.cristina.delacruz@phillife.com.ph`
+   * is 39 characters, so the margin is one or two characters, not many. An
+   * address past 40 cannot be typed here at all, and the input stops silently
+   * -- the user sees their own address refuse to finish. It was 254, the RFC
+   * maximum, for that reason. If someone reports being unable to enter their
+   * email, this number is why.
    *
    * Trimmed because a copy-pasted user code often carries a trailing space,
    * and the identifier has to match on step two exactly.
@@ -27,7 +34,7 @@ export const loginStep1Schema = z.object({
     .string()
     .trim()
     .min(1, 'Enter your email, user code, or employee number.')
-    .max(254, 'That is too long to be an email, user code, or employee number.'),
+    .max(40, 'That is too long to be an email, user code, or employee number.'),
 
   /**
    * No minimum. `loginStep1` imposes none either -- it is a bare
