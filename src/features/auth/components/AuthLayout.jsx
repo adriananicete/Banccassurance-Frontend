@@ -13,11 +13,6 @@ import logo from "../../../assets/PhilLife-Color.png";
  * re-request of the logo.
  *
  *   children   The routed form. LoginForm on /login, OtpForm on /login/verify.
- *
- * Every class below was copied from your LoginForm exactly as written,
- * including `justif-center` on the card -- see the note in the commit. It is
- * a dead class today, so correcting the spelling would change the layout
- * rather than leave it alone, which is your call and not mine.
  */
 export function AuthLayout({ children }) {
   return (
@@ -32,7 +27,7 @@ export function AuthLayout({ children }) {
         </div>
       </div>
 
-      <div className="border rounded-sm shadow-xl flex justif-center items-center p-1">
+      <div className="border rounded-sm shadow-xl flex justify-center items-center p-1">
         {children}
       </div>
     </div>
