@@ -1,84 +1,139 @@
 /**
  * ============================================================================
- *  THIS FILE IS YOURS. Replace everything below with your design.
+ *  THIS FILE IS YOURS.
  * ============================================================================
  *
- * It is presentational only: no hooks, no fetching, no navigation. Everything
- * it needs arrives as a prop, and everything it does goes out as a callback.
- * `pages/LoginPage.jsx` is the container that supplies them.
+ * Presentational. `pages/LoginPage.jsx` supplies every prop; the logo, the
+ * title and the card around this form live in `AuthLayout.jsx`, which stays
+ * mounted while this swaps to OtpForm.
  *
- * The props contract -- design against this and the wiring keeps working:
+ * The props contract:
  *
- *   register      react-hook-form's register. Spread it onto each input:
- *                   <input {...register('identifier')} />
- *                 The field names are `identifier` and `password`.
+ *   register      react-hook-form's register. Fields: `identifier`, `password`.
+ *   errors        errors.identifier?.message, errors.password?.message
+ *   serverError   A string or null. THE BACKEND'S OWN WORDING -- show as given.
+ *   isPending     True while step one is in flight.
+ *   onSubmit      Already wrapped by handleSubmit; pass straight to <form>.
  *
- *   errors        Per-field validation messages, e.g. errors.identifier?.message.
- *                 These come from zod, before any request is sent.
- *
- *   serverError   A string or null. THE BACKEND'S OWN WORDING -- show it as
- *                 given. Several endpoints answer the same status code for
- *                 different reasons and only the message distinguishes them,
- *                 so do not replace it with a generic line.
- *
- *   isPending     True while step one is in flight. Disable the submit button.
- *
- *   onSubmit      Pass straight to <form onSubmit={onSubmit}>. It is already
- *                 wrapped by handleSubmit, so it validates first.
- *
- * One thing worth knowing while you design the identifier field: it accepts
- * THREE things -- an email address, a user code (USR-STF-00001) or an employee
- * number. All three go in the same field. So the label should not say "Email".
+ * Pure-UI state may live in this file -- the password toggle below is the
+ * worked example. Anything that touches the server or the URL belongs in the
+ * container instead.
  */
-export function LoginForm({ register, errors, serverError, isPending, onSubmit }) {
+import { useState } from "react";
+import { MdLogin } from "react-icons/md";
+import { FiUser } from "react-icons/fi";
+import { CiLock } from "react-icons/ci";
+import { LuEye, LuEyeOff } from "react-icons/lu";
+import { RiUserSharedLine } from "react-icons/ri";
+import { Link } from "react-router";
+
+import { paths } from "@/routes/paths";
+
+export function LoginForm({
+  register,
+  errors,
+  serverError,
+  isPending,
+  onSubmit,
+}) {
+  const [isPasswordVisible, setPasswordVisible] = useState(false);
+
   return (
-    <form onSubmit={onSubmit} className="mx-auto flex w-full max-w-sm flex-col gap-4 p-8">
-      <div>
-        <h1 className="text-xl font-semibold">Sign in</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Use your email, user code, or employee number.
-        </p>
+    <form
+      onSubmit={onSubmit}
+      className="flex w-full max-w-sm flex-col gap-6 px-14 py-4"
+    >
+      <div className="w-full flex flex-col justify-center items-center gap-2">
+        <div className="bg-[#ededed] p-2 w-14 flex justify-center items-center rounded-full shadow-inner">
+          <div className="bg-white border p-2 w-full text-white rounded-full shadow-accent">
+            <RiUserSharedLine size={20} color="#000" />
+          </div>
+        </div>
+
+        <div className="flex flex-col justify-center items-center">
+          <h1 className="text-lg font-semibold">Sign in</h1>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Enter your credentials to login.
+          </p>
+        </div>
       </div>
 
       {serverError ? (
-        <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+        <p
+          role="alert"
+          className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+        >
           {serverError}
         </p>
       ) : null}
 
       <label className="flex flex-col gap-1 text-sm">
-        <span>Email, user code, or employee number</span>
-        <input
-          {...register('identifier')}
-          autoComplete="username"
-          autoFocus
-          className="rounded-md border border-input px-3 py-2"
-        />
+        <span>Employee number *</span>
+        <div className="border flex">
+          <div className="flex justify-center items-center px-2">
+            <FiUser />
+          </div>
+          <input
+            {...register("identifier")}
+            autoComplete="username"
+            placeholder="Employee Number or UserCode"
+            autoFocus
+            className=" border text-xs border-none px-3 py-2 w-full focus:outline-none focus:ring-0"
+          />
+        </div>
         {errors.identifier ? (
-          <span className="text-xs text-destructive">{errors.identifier.message}</span>
+          <span className="text-xs text-destructive">
+            {errors.identifier.message}
+          </span>
         ) : null}
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
-        <span>Password</span>
-        <input
-          {...register('password')}
-          type="password"
-          autoComplete="current-password"
-          className="rounded-md border border-input px-3 py-2"
-        />
+        <span>Password *</span>
+        <div className="border flex justify-center items-center px-2">
+          <div>
+            <CiLock />
+          </div>
+          <input
+            {...register("password")}
+            type={isPasswordVisible ? "text" : "password"}
+            autoComplete="current-password"
+            placeholder="******"
+            className="bg-transparent border text-xs border-none px-3 py-2 w-full focus:outline-none focus:ring-0"
+          />
+          {/* type="button" matters: a bare <button> inside a form defaults to
+              submit, so toggling the password would post the login. */}
+          <button
+            type="button"
+            onClick={() => setPasswordVisible((visible) => !visible)}
+            aria-label={isPasswordVisible ? "Hide password" : "Show password"}
+            className="flex justify-center items-center px-2 cursor-pointer"
+          >
+            {isPasswordVisible ? <LuEyeOff /> : <LuEye />}
+          </button>
+        </div>
         {errors.password ? (
-          <span className="text-xs text-destructive">{errors.password.message}</span>
+          <span className="text-xs text-destructive">
+            {errors.password.message}
+          </span>
         ) : null}
       </label>
 
       <button
         type="submit"
         disabled={isPending}
-        className="rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground disabled:opacity-50"
+        className="cursor-pointer rounded-sm bg-indigo-950 px-3 py-2 text-sm text-primary-foreground disabled:opacity-50 flex justify-center items-center gap-2"
       >
-        {isPending ? 'Sending code…' : 'Continue'}
+        {" "}
+        <MdLogin />
+        {isPending ? "Sending code…" : "Login"}
       </button>
+
+      <div className="flex justify-center items-center">
+        <p className="text-xs">
+          Don't have an account yet? <Link to={paths.register}>Sign Up</Link>
+        </p>
+      </div>
     </form>
-  )
+  );
 }
