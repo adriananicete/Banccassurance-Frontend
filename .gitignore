@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Local environment. .env.example is committed and carries the same values --
+# nothing here is secret today, and this keeps it that way.
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -1,14 +1,13 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { RouterProvider } from 'react-router'
+
+import { Providers } from './app/Providers'
+import { router } from './app/router'
 
 function App() {
-
   return (
-    <>
-      <div className='bg-[red]'>Hello</div>
-    </>
+    <Providers>
+      <RouterProvider router={router} />
+    </Providers>
   )
 }
 
