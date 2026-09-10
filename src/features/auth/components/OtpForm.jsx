@@ -75,10 +75,9 @@ export function OtpForm({
     >
       <div className="flex flex-col justify-center items-center">
         <h1 className="text-lg font-semibold">Enter your code</h1>
-        {/* "It expires in 5 minutes" was dropped from this line: the counter
-            beside the label below now says the same thing, and says it live. */}
         <p className="mt-1 text-center text-xs text-muted-foreground">
-          We emailed a code to the address on <strong>{identifier}</strong>.
+          We emailed a code to the address on <strong>{identifier}</strong>. It expires in 5
+          minutes.
         </p>
       </div>
 
