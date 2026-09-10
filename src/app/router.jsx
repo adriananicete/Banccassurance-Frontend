@@ -13,6 +13,7 @@ import {
 import { AuthLayoutRoute } from '@/features/auth/pages/AuthLayoutRoute'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { VerifyOtpPage } from '@/features/auth/pages/VerifyOtpPage'
+import { ChooseTenantPage } from '@/features/users/pages/ChooseTenantPage'
 import { RegisterPage } from '@/features/users/pages/RegisterPage'
 import { GuestOnly } from '@/routes/GuestOnly'
 import { RequireAuth } from '@/routes/RequireAuth'
@@ -60,7 +61,11 @@ export const router = createBrowserRouter([
         children: [
           { path: paths.login, element: <LoginPage /> },
           { path: paths.loginVerify, element: <VerifyOtpPage /> },
-          { path: paths.register, element: <RegisterPage /> },
+          // Registration is two steps, and the company sits in the URL rather
+          // than in state: the back button returns to the chooser, and a
+          // reload of a half-filled form does not lose which company it is.
+          { path: paths.register, element: <ChooseTenantPage /> },
+          { path: paths.registerFor(':tenant'), element: <RegisterPage /> },
         ],
       },
     ],

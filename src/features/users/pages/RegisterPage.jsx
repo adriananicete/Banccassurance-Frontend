@@ -1,15 +1,21 @@
 import { useEffect, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { Navigate, useParams } from 'react-router'
 
-import { REGISTERABLE_ROLES, ROLE_LABELS } from '@/constants/roles'
+import {
+  ROLE_LABELS,
+  TENANT_LABELS,
+  TENANT_SLUGS,
+  registerableRolesForTenant,
+} from '@/constants/roles'
 import { useBranches, useGroups, useRegions } from '@/features/lookups/hooks'
+import { manilaDayYearsAgo } from '@/lib/datetime'
+import { paths } from '@/routes/paths'
 
 import { RegisterForm } from '../components/RegisterForm'
 import { RegisterSuccess } from '../components/RegisterSuccess'
 import { useCheckEmail, useRegisterUser } from '../hooks'
-import { manilaDayYearsAgo } from '@/lib/datetime'
-
 import {
   MAXIMUM_AGE,
   MINIMUM_AGE,
@@ -17,11 +23,6 @@ import {
   registerSchema,
   visibleCodeFields,
 } from '../schemas'
-
-const ROLE_OPTIONS = REGISTERABLE_ROLES.map((role) => ({
-  value: role,
-  label: ROLE_LABELS[role],
-}))
 
 const EMPTY_FORM = {
   role: '',
@@ -39,11 +40,20 @@ const EMPTY_FORM = {
 }
 
 /**
- * Public registration. No session exists here, which is why the three lookups
- * it uses are the unauthenticated ones -- `/lookups/plans` needs a cookie and
- * plays no part.
+ * Step two of registration: the form itself, for one company.
+ *
+ * The company arrives in the URL rather than in state so the back button
+ * returns to the chooser and a half-filled form is not lost to a stray
+ * navigation. It also means only four roles are offered instead of eight --
+ * the other four belong to the other company and could never be right.
+ *
+ * No session exists here, which is why the three lookups it uses are the
+ * unauthenticated ones. `/lookups/plans` needs a cookie and plays no part.
  */
 export function RegisterPage() {
+  const { tenant: tenantSlug } = useParams()
+  const tenant = TENANT_SLUGS[tenantSlug]
+
   const {
     register,
     handleSubmit,
@@ -105,6 +115,12 @@ export function RegisterPage() {
     registerMutation.mutate(buildRegistrationPayload(values))
   })
 
+  // An unknown slug -- a typo, or an old link -- goes back to the chooser
+  // rather than rendering a form with an empty role list and no way forward.
+  if (!tenant) {
+    return <Navigate to={paths.register} replace />
+  }
+
   if (registerMutation.isSuccess) {
     return (
       <RegisterSuccess
@@ -114,6 +130,11 @@ export function RegisterPage() {
     )
   }
 
+  const roleOptions = registerableRolesForTenant(tenant).map((value) => ({
+    value,
+    label: ROLE_LABELS[value],
+  }))
+
   return (
     <RegisterForm
       register={register}
@@ -121,7 +142,9 @@ export function RegisterPage() {
       onSubmit={onSubmit}
       isPending={registerMutation.isPending}
       serverError={registerMutation.error?.message ?? null}
-      roleOptions={ROLE_OPTIONS}
+      roleOptions={roleOptions}
+      tenantLabel={TENANT_LABELS[tenant]}
+      changeTenantPath={paths.register}
       codeFields={codeFields}
       regions={regionsQuery.data ?? []}
       groups={groupsQuery.data ?? []}

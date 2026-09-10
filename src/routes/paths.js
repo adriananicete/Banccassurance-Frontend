@@ -2,7 +2,10 @@
 export const paths = {
   login: '/login',
   loginVerify: '/login/verify',
+  /** The company chooser. Registration starts here, not at the form. */
   register: '/register',
+  /** `tenant` is a slug from TENANT_SLUGS: 'landbank' or 'phillife'. */
+  registerFor: (tenant) => `/register/${tenant}`,
 
   home: '/',
 

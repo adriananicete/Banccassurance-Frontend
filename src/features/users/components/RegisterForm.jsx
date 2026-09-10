@@ -19,9 +19,15 @@
  *                   distinct 400s and 409s and only the message separates
  *                   them.
  *
- *   roleOptions     [{ value, label }] -- the EIGHT registerable roles.
+ *   roleOptions     [{ value, label }] -- the FOUR roles that belong to the
+ *                   company chosen on the previous screen, not all eight.
  *                   SUPERADMIN is never among them; it is seeded, never
  *                   registered, and answers 400.
+ *
+ *   tenantLabel     "Landbank" or "PhilLife". Shown so the user can tell they
+ *                   are on the right form -- the four roles offered would
+ *                   otherwise be the only clue.
+ *   changeTenantPath  Back to the chooser.
  *
  *   codeFields      { group, branch, region, groupRequired, ... } -- which of
  *                   the three location fields this role may send. Render only
@@ -71,6 +77,8 @@ export function RegisterForm({
   isPending,
   serverError,
   roleOptions,
+  tenantLabel,
+  changeTenantPath,
   codeFields,
   regions,
   groups,
@@ -96,9 +104,15 @@ export function RegisterForm({
         </div>
 
         <div className="flex flex-col justify-center items-center">
-          <h1 className="text-lg font-semibold">Create your account</h1>
+          <h1 className="text-lg font-semibold">Create your {tenantLabel} account</h1>
           <p className="mt-1 text-center text-xs text-muted-foreground">
             Your password will be emailed to you once your registration is approved.
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Not {tenantLabel}?{" "}
+            <Link to={changeTenantPath} className="font-bold hover:text-[#157d03]">
+              Change company
+            </Link>
           </p>
         </div>
       </div>
