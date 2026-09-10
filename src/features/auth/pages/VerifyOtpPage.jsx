@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Navigate, useLocation, useNavigate } from 'react-router'
@@ -24,7 +25,20 @@ export function VerifyOtpPage() {
   const location = useLocation()
   const from = location.state?.from
 
-  const challenge = readOtpChallenge()
+  /**
+   * READ ONCE, ON MOUNT. Not on every render.
+   *
+   * A successful verification clears the challenge from sessionStorage and
+   * then establishes the session, and establishing it re-renders this page.
+   * Re-reading storage on that render found nothing, so the stale-challenge
+   * guard below fired and sent a freshly signed-in user to /login -- where
+   * GuestOnly, now seeing a session, bounced them onward to the dashboard.
+   * That was the flash of the login screen between the OTP and the app.
+   *
+   * Holding the value in state means the page renders against what it was
+   * given, not against storage that has legitimately moved on.
+   */
+  const [challenge] = useState(readOtpChallenge)
 
   /**
    * `control` rather than `register`: the code is entered across six boxes
