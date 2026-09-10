@@ -17,7 +17,7 @@ export const loginStep1Schema = z.object({
    * would refuse two of the three valid ways to sign in.
    *
    * 254 is the maximum length of an email address. It is deliberately NOT the
-   * 20 used on the password below: real addresses run past 20 easily, so that
+   * 30 used on the password below: real addresses run past 30 easily, so that
    * ceiling would refuse one of the three ways in.
    *
    * Trimmed because a copy-pasted user code often carries a trailing space,
@@ -35,21 +35,21 @@ export const loginStep1Schema = z.object({
    * form that refuses a short password refuses the attempt rather than the
    * password, locking out any account whose password predates a rule.
    *
-   * The 20 is Adrian's decision. It fits everything we know of today: seeded
-   * accounts use `password123` (11) and registration generates
+   * The 30 is Adrian's decision. It clears everything we know of today:
+   * seeded accounts use `password123` (11) and registration generates
    * `crypto.randomBytes(12).toString('base64url')` (16).
    *
    * ⚠️ It is a ceiling this form invents, not one the API has.
    * `changePassword` enforces a minimum of 8 and NO maximum, so an account
-   * that sets a 25-character password there can no longer be typed into this
-   * form -- the input would silently stop at 20 and the server would answer
+   * that sets a 35-character password there can no longer be typed into this
+   * form -- the input would silently stop at 30 and the server would answer
    * "Invalid credentials" with nothing to explain it. Whatever cap the change
    * -password screen ends up with has to match this one.
    */
   password: z
     .string()
     .min(1, 'Enter your password.')
-    .max(20, 'Password must be 20 characters or fewer.'),
+    .max(30, 'Password must be 30 characters or fewer.'),
 })
 
 export const verifyOtpSchema = z.object({
