@@ -1,59 +1,53 @@
 import { useAuth } from '@/features/auth/AuthContext'
-import { useLogout } from '@/features/auth/hooks'
-import { REACH, ROLE_LABELS } from '@/constants/roles'
+import { REACH } from '@/constants/roles'
 
 /**
  * ============================================================================
- *  SCAFFOLDING. Delete this once the app shell exists.
+ *  SCAFFOLDING. Delete this once the dashboard is built.
  * ============================================================================
  *
- * It proves the foundation works and is genuinely useful while building: it
- * renders exactly what GET /users/scope answered, which is the only thing that
- * decides what this account can see and do.
+ * It renders exactly what GET /users/scope answered, which is the only thing
+ * that decides what this account can see and do. That makes it the fastest way
+ * to tell a permissions bug from a data one while building Phase 1.
  *
- * The `reach` line is the one to read first. An empty `scopes` array means two
- * opposite things: a Sector Head holds the entire tenant with `TENANT`, while
- * an Account Officer with `ASSIGNED` and no rows holds nothing at all and
- * cannot create a referral until an Area Sales Head assigns them branches.
+ * The blocking case -- approved but holding nothing -- is announced by the app
+ * shell across every screen, so it is not repeated here.
  */
 export function ScaffoldHome() {
-  const { user, profile } = useAuth()
-  const logoutMutation = useLogout()
-
-  const holdsNothing = user?.reach === REACH.ASSIGNED && (user?.scopes?.length ?? 0) === 0
+  const { user } = useAuth()
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6 p-8">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold">{profile?.fullName ?? user?.userCode}</h1>
-          <p className="text-sm text-muted-foreground">
-            {ROLE_LABELS[user?.role] ?? user?.role} · {user?.userCode} · {user?.tenant ?? 'no tenant'}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => logoutMutation.mutate()}
-          disabled={logoutMutation.isPending}
-          className="rounded-md border border-input px-3 py-2 text-sm disabled:opacity-50"
-        >
-          {logoutMutation.isPending ? 'Signing out…' : 'Sign out'}
-        </button>
-      </header>
-
-      {holdsNothing ? (
-        <p className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-          This account has been approved but holds no scope yet, so it cannot work. Someone at the
-          tier above has to assign it.
+    <div className="flex max-w-2xl flex-col gap-6">
+      <div>
+        <h1 className="text-xl font-semibold">Session</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          The raw <code className="rounded bg-muted px-1.5 py-0.5 text-xs">GET /users/scope</code>{' '}
+          response. Role and scope are re-read from it on every app load — nothing here is cached
+          across a reload.
         </p>
-      ) : null}
+      </div>
 
-      <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-medium">reach: {user?.reach}</h2>
-        <pre className="overflow-x-auto rounded-md bg-muted p-4 text-xs">
-          {JSON.stringify(user, null, 2)}
-        </pre>
-      </section>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
+        <dt className="text-muted-foreground">reach</dt>
+        <dd className="font-medium">
+          {user?.reach}
+          {user?.reach === REACH.TENANT ? (
+            <span className="ml-2 font-normal text-muted-foreground">
+              — holds the whole tenant, so the empty arrays below are correct
+            </span>
+          ) : null}
+        </dd>
+
+        <dt className="text-muted-foreground">scopes</dt>
+        <dd className="font-medium">{user?.scopes?.length ?? 0}</dd>
+
+        <dt className="text-muted-foreground">branches</dt>
+        <dd className="font-medium">{user?.branches?.length ?? 0}</dd>
+      </dl>
+
+      <pre className="overflow-x-auto rounded-md bg-muted p-4 text-xs">
+        {JSON.stringify(user, null, 2)}
+      </pre>
     </div>
   )
 }
