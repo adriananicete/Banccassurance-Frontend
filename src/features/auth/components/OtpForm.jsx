@@ -88,7 +88,7 @@ export function OtpForm({
         <div
           role="group"
           aria-labelledby="otp-label"
-          className="w-full h-[100px] border flex justify-center items-center"
+          className="w-full h-[100px] flex justify-center items-center"
         >
           <OtpInput
             length={6}
@@ -97,7 +97,7 @@ export function OtpForm({
             hasError={Boolean(errors.otp)}
             disabled={isPending}
             autoFocus
-            boxClassName="size-10 border rounded-sm text-sm focus:border-indigo-950"
+            boxClassName="size-12 border border-neutral-400 rounded-sm text-base focus:border-indigo-950"
           />
         </div>
         {errors.otp ? (
