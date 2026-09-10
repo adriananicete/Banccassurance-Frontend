@@ -112,7 +112,10 @@ export function RegisterForm({
   return (
     <form
       onSubmit={onSubmit}
-      className="flex w-full max-w-md flex-col gap-6 px-10 py-6"
+      // gap-4 rather than LoginForm's gap-6, and py-5 rather than py-6. Five
+      // gaps at 8px less is 40px, which together with the reserved message
+      // lines is what keeps the tallest step inside a 768p laptop viewport.
+      className="flex w-full max-w-md flex-col gap-4 px-10 py-5"
     >
       <div className="w-full flex flex-col justify-center items-center gap-2">
         <div className="bg-[#ededed] p-2 w-14 flex justify-center items-center rounded-full shadow-inner">
@@ -145,7 +148,7 @@ export function RegisterForm({
       {serverError ? (
         <p
           role="alert"
-          className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+          className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive"
         >
           {serverError}
         </p>
@@ -242,9 +245,9 @@ export function RegisterForm({
             maxLength={254}
             hint={
               emailTaken === true
-                ? "That email is already registered."
+                ? "Already registered."
                 : emailTaken === false
-                  ? "That email is available."
+                  ? "Available."
                   : null
             }
             hintTone={emailTaken === true ? "bad" : "good"}
@@ -341,22 +344,16 @@ export function RegisterForm({
         </button>
       </div>
 
-      <div className="flex flex-col justify-center items-center gap-1 text-xs">
-        <p>
-          Not {tenantLabel}?{" "}
-          <Link
-            to={changeTenantPath}
-            className="font-bold hover:text-[#157d03]"
-          >
-            Change company
-          </Link>
-        </p>
-        <p>
-          Already have an account?{" "}
-          <Link to={paths.login} className="font-bold hover:text-[#157d03]">
-            Sign In
-          </Link>
-        </p>
+      {/* One line rather than two: every line here is height the tallest step
+          cannot spare. */}
+      <div className="flex justify-center items-center gap-3 text-xs">
+        <Link to={changeTenantPath} className="font-bold hover:text-[#157d03]">
+          Change company
+        </Link>
+        <span className="text-muted-foreground">·</span>
+        <Link to={paths.login} className="font-bold hover:text-[#157d03]">
+          Sign In
+        </Link>
       </div>
     </form>
   );
@@ -397,19 +394,7 @@ function Field({
           className="bg-transparent border text-xs border-none px-3 py-2 w-full focus:outline-none focus:ring-0"
         />
       </div>
-      {error ? (
-        <span className="text-xs text-destructive">{error.message}</span>
-      ) : hint ? (
-        <span
-          className={
-            hintTone === "bad"
-              ? "text-xs text-destructive"
-              : "text-xs text-muted-foreground"
-          }
-        >
-          {hint}
-        </span>
-      ) : null}
+      <FieldMessage error={error} hint={hint} hintTone={hintTone} />
     </label>
   );
 }
@@ -444,9 +429,39 @@ function SelectField({
           ))}
         </select>
       </div>
-      {error ? (
-        <span className="text-xs text-destructive">{error.message}</span>
-      ) : null}
+      <FieldMessage error={error} />
     </label>
+  );
+}
+
+/**
+ * The line under a field, and the reason the page does not jump.
+ *
+ * It is ALWAYS RENDERED, holding a non-breaking space when there is nothing to
+ * say. Showing it only on error makes every field a row that grows by one line
+ * the moment it fails -- four failing fields add about 64px, which is exactly
+ * what pushes the card past the viewport and brings up the scrollbar.
+ *
+ * Reserved, the card is the same height whether the form is untouched or every
+ * field is wrong. `leading-4` fixes the line box so the reservation is exact.
+ *
+ * ⚠️ THIS ONLY HOLDS WHILE MESSAGES FIT ONE LINE. A column here is about
+ * 176px, so roughly forty characters at text-xs. A longer message wraps and
+ * the row grows again -- which is why the messages in schemas.js are short.
+ * Keep them that way, or reserve two lines here instead.
+ */
+function FieldMessage({ error, hint, hintTone = "good" }) {
+  const message = error?.message ?? hint ?? null;
+
+  return (
+    <span
+      className={
+        error || hintTone === "bad"
+          ? "text-xs leading-4 min-h-4 text-destructive"
+          : "text-xs leading-4 min-h-4 text-muted-foreground"
+      }
+    >
+      {message ?? " "}
+    </span>
   );
 }

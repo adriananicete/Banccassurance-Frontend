@@ -121,19 +121,19 @@ export const registerSchema = z
         ctx.addIssue({
           code: 'custom',
           path: ['birthday'],
-          message: 'Birthday cannot be in the future.',
+          message: 'Cannot be in the future.',
         })
       } else if (values.birthday > manilaDayYearsAgo(MINIMUM_AGE)) {
         ctx.addIssue({
           code: 'custom',
           path: ['birthday'],
-          message: `You must be at least ${MINIMUM_AGE} years old to register.`,
+          message: `Must be ${MINIMUM_AGE} or older.`,
         })
       } else if (values.birthday <= manilaDayYearsAgo(MAXIMUM_AGE + 1)) {
         ctx.addIssue({
           code: 'custom',
           path: ['birthday'],
-          message: `Check the year — that is over ${MAXIMUM_AGE} years old.`,
+          message: `Check the year — over ${MAXIMUM_AGE}.`,
         })
       }
     }
@@ -141,12 +141,18 @@ export const registerSchema = z
     const rule = REGISTRATION_FIELDS[values.role]
     if (!rule) return
 
-    for (const [field, label] of CODE_FIELDS) {
+    // The label is not read here -- the message names no field, because the
+    // field's own label sits directly above it. CODE_FIELDS keeps the labels
+    // as the record of what each code is called on screen.
+    for (const [field] of CODE_FIELDS) {
       if (rule[field] === 'required' && !values[field]) {
         ctx.addIssue({
           code: 'custom',
           path: [field],
-          message: `${label} is required for this role`,
+          // Short on purpose: the label sits directly above, and a message
+          // that wraps to a second line grows the row and brings back the
+          // page scroll the wizard exists to avoid. See FieldMessage.
+          message: `Required for this role`,
         })
       }
     }
