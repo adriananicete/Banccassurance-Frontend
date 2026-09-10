@@ -3,7 +3,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { ApiError, onSessionExpired } from '@/lib/apiClient'
 import { queryKeys } from '@/lib/queryKeys'
-import { clearSessionStorageAll, readDisplayProfile, saveDisplayProfile } from '@/lib/session'
+import {
+  clearDisplayProfile,
+  clearSessionStorageAll,
+  readDisplayProfile,
+  saveDisplayProfile,
+} from '@/lib/session'
 import { fetchScope } from '@/features/users/api'
 import { hasRole } from '@/constants/roles'
 
@@ -49,7 +54,16 @@ export function AuthProvider({ children }) {
   useEffect(
     () =>
       onSessionExpired(() => {
-        clearSessionStorageAll()
+        /**
+         * ⚠️ THE DISPLAY PROFILE ONLY -- NOT the whole of session storage.
+         *
+         * This fires for the bootstrap probe's 401 too, which is the ordinary
+         * answer on the login screen, and `refetchOnWindowFocus` fires it
+         * again every time the tab regains focus. Clearing everything here
+         * therefore wiped the pending OTP challenge each time the user
+         * stepped out to read the code and came back.
+         */
+        clearDisplayProfile()
         setProfile(null)
         queryClient.setQueryData(queryKeys.scope, null)
         // Drop everything else so a re-login cannot show the previous
@@ -64,9 +78,27 @@ export function AuthProvider({ children }) {
     async (userObject) => {
       saveDisplayProfile(userObject)
       setProfile(readDisplayProfile())
-      // The cookie exists now, so scope is fetchable. Await it so the caller
-      // can navigate into a guarded route without a flash of the splash.
-      await queryClient.fetchQuery({ queryKey: queryKeys.scope, queryFn: fetchScope })
+
+      /**
+       * ⚠️ `staleTime: 0` IS LOAD-BEARING. Without it this returned instantly
+       * with the wrong answer and the user was sent back to /login.
+       *
+       * `fetchQuery` takes its staleTime from the client's defaults -- 30
+       * seconds here -- not from the `useQuery` above. And this cache entry
+       * already held `null`, written by the session-expired handler when the
+       * bootstrap probe answered 401 on the login screen. Worse, focusing the
+       * tab refetched it, so stepping out to fetch the code from the inbox
+       * and stepping back rewrote that `null` seconds before the OTP was
+       * submitted. `fetchQuery` saw fresh data, made no request, and handed
+       * back null -- no user, so RequireAuth bounced to /login.
+       *
+       * The cookie was just set; this has to go to the network.
+       */
+      await queryClient.fetchQuery({
+        queryKey: queryKeys.scope,
+        queryFn: fetchScope,
+        staleTime: 0,
+      })
     },
     [queryClient],
   )
