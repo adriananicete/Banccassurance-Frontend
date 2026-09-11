@@ -1,7 +1,15 @@
-import { LuLogOut, LuMenu, LuX } from 'react-icons/lu'
-import { NavLink } from 'react-router'
+import { useState } from "react";
+import { LuLogOut, LuMenu, LuUser, LuX } from "react-icons/lu";
+import { NavLink } from "react-router";
 
-import { cn } from '@/lib/utils'
+import { cn } from "@/lib/utils";
+import { paths } from "@/routes/paths";
+import logo from "../../assets/PhilLife-Color-resize.png";
+import { IoNotificationsOutline } from "react-icons/io5";
+import { LuMoon } from "react-icons/lu";
+import { LuMessageSquareMore } from "react-icons/lu";
+import { IoSettingsOutline } from "react-icons/io5";
+import { IoIosArrowForward } from "react-icons/io";
 
 /**
  * ============================================================================
@@ -42,6 +50,11 @@ export function AppShell({
   isLoggingOut,
   children,
 }) {
+  // Purely visual: whether the Settings group at the foot of the sidebar is
+  // showing its two items. Nothing outside this file cares, so it stays here
+  // rather than being lifted into AppLayout.
+  const [isSettingsOpen, setSettingsOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Mobile backdrop. Hidden from assistive tech -- the close button in
@@ -56,13 +69,23 @@ export function AppShell({
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-sidebar-border bg-sidebar transition-transform duration-200',
-          'lg:translate-x-0',
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full',
+          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-sidebar-border bg-sidebar transition-transform duration-200",
+          "lg:translate-x-0",
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-sidebar-border px-4">
-          <span className="text-sm font-semibold text-sidebar-foreground">Bancassurance</span>
+        <div className="flex h-16 shrink-0 items-center justify-start gap-3 border-b border-sidebar-border px-4">
+          <div className="bg-neutral-100 border w-[38px] h-[38px] rounded-full flex justify-start items-center">
+            <img src="" width={68} alt="" />
+          </div>
+
+          <div className="h-full flex flex-col justify-center items-start">
+            <span className="text-xs font-semibold">Jimmy Santos</span>
+            <span className="text-[11px] text-neutral-500 leading-4">
+              Department Head
+            </span>
+          </div>
+
           <button
             type="button"
             onClick={onCloseSidebar}
@@ -73,7 +96,7 @@ export function AppShell({
           </button>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
+        <nav className="flex flex-1 flex-col gap-2 overflow-y-auto justify-start items-start p-5">
           {navItems.map(({ to, label, Icon }) => (
             <NavLink
               key={to}
@@ -81,25 +104,92 @@ export function AppShell({
               onClick={onCloseSidebar}
               // `end` on the home path only, so "/" does not stay active on
               // every child route.
-              end={to === '/'}
+              end={to === "/"}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground',
+                  "w-full flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-xs text-sidebar-foreground",
                   isActive
-                    ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
-                    : 'hover:bg-sidebar-accent/60',
+                    ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+                    : "hover:bg-sidebar-accent/60",
                 )
               }
             >
-              <Icon aria-hidden className="size-4 shrink-0" />
+              <Icon aria-hidden className="size-3.5 shrink-0" />
               <span className="truncate">{label}</span>
             </NavLink>
           ))}
         </nav>
+
+        {/* The two things that are not places in the app -- the account, and
+            the way out of it. They open upward so the trigger stays put. */}
+        <div className="w-full min-h-25 px-8 pb-4 flex flex-col justify-end items-stretch">
+          {isSettingsOpen ? (
+            <div className="flex flex-col gap-1 pb-2">
+              <NavLink
+                to={paths.profile}
+                onClick={onCloseSidebar}
+                className={({ isActive }) =>
+                  cn(
+                    // The negative margin cancels the padding, so the hover
+                    // block is wider than the text without shifting the label
+                    // out of line with Settings below it.
+                    "w-full flex items-center gap-2 -mx-2.5 px-2.5 rounded-md py-1.5 text-xs text-sidebar-foreground transition-colors",
+                    isActive
+                      ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+                      : "hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+                  )
+                }
+              >
+                <LuUser aria-hidden className="size-3.5 shrink-0" />
+                <span className="truncate">Profile</span>
+              </NavLink>
+
+              <button
+                type="button"
+                onClick={onLogout}
+                disabled={isLoggingOut}
+                className="w-full flex items-center gap-2 -mx-2.5 px-2.5 rounded-md py-1.5 text-xs text-destructive/90 transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50 disabled:hover:bg-transparent"
+              >
+                <LuLogOut aria-hidden className="size-3.5 shrink-0" />
+                <span className="truncate">
+                  {isLoggingOut ? "Signing out…" : "Sign out"}
+                </span>
+              </button>
+            </div>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={() => setSettingsOpen((open) => !open)}
+            aria-expanded={isSettingsOpen}
+            className="w-full flex justify-between items-center -mx-2.5 px-2.5 rounded-md py-1.5 cursor-pointer text-sidebar-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+          >
+            <div className="flex justify-start items-center gap-2">
+              <IoSettingsOutline size={14} />
+
+              <span className="text-xs">Settings</span>
+            </div>
+            <IoIosArrowForward
+              size={14}
+              aria-hidden
+              className={cn(
+                "transition-transform duration-200",
+                isSettingsOpen ? "-rotate-90" : "rotate-90",
+              )}
+            />
+          </button>
+        </div>
       </aside>
 
       <div className="lg:pl-64">
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border bg-background px-4">
+        <header className="sticky top-0 z-20 flex h-16 justify-between items-center gap-3 border-b border-border px-4">
+          <div className="h-full flex justify-start items-center gap-2">
+            <div className="bg-neutral-100 border py-1 rounded-sm flex justify-start items-center">
+              <img src={logo} width={68} alt="" />
+            </div>
+            <h1 className="font-bold">Banccassurance Referral System</h1>
+          </div>
+
           <button
             type="button"
             onClick={onToggleSidebar}
@@ -110,27 +200,20 @@ export function AppShell({
             <LuMenu aria-hidden className="size-5" />
           </button>
 
-          <div className="ml-auto flex items-center gap-3">
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-medium leading-tight">{displayName ?? userCode}</p>
-              <p className="text-xs leading-tight text-muted-foreground">
-                {roleLabel} · {userCode}
-              </p>
-            </div>
+          <div className="ml-auto flex items-center gap-2 pr-3">
+            {/* Messages deliberately has no `to` yet -- see the note on
+                HeaderIconButton. Three roles get a 403 on every /messages
+                endpoint, and this header is not filtered by role the way the
+                sidebar is. */}
+            <HeaderIconButton Icon={LuMessageSquareMore} label="Messages" />
 
-            <Avatar src={avatarSrc} name={displayName ?? userCode} />
+            <HeaderIconButton
+              Icon={IoNotificationsOutline}
+              label="Notifications"
+              to={paths.notifications}
+            />
 
-            <button
-              type="button"
-              onClick={onLogout}
-              disabled={isLoggingOut}
-              className="flex items-center gap-2 rounded-md border border-input px-3 py-2 text-sm disabled:opacity-50"
-            >
-              <LuLogOut aria-hidden className="size-4" />
-              <span className="hidden sm:inline">
-                {isLoggingOut ? 'Signing out…' : 'Sign out'}
-              </span>
-            </button>
+            <HeaderIconButton Icon={LuMoon} label="Switch to dark theme" />
           </div>
         </header>
 
@@ -143,10 +226,52 @@ export function AppShell({
           </p>
         ) : null}
 
-        <main className="p-4 lg:p-8">{children}</main>
+        <main className="p-4">{children}</main>
       </div>
     </div>
-  )
+  );
+}
+
+/**
+ * The square icon buttons in the header. Identical but for the icon, so the
+ * styling lives here once.
+ *
+ *   Icon     A react-icons component.
+ *   label    REQUIRED. An icon on its own has no accessible name, and the
+ *            tooltip is the only thing that says what it does on a mouse.
+ *   to       A route, for the ones that go somewhere.
+ *   onClick  An action, for the ones that do something here.
+ *
+ * Pass one of `to` or `onClick`. With neither it renders as a disabled button
+ * rather than something that looks live and swallows the click.
+ *
+ * ⚠️ THIS ROW IS NOT FILTERED BY ROLE, unlike the sidebar. If an entry only
+ * works for some roles, the caller has to decide -- this component cannot.
+ */
+function HeaderIconButton({ Icon, label, to, onClick }) {
+  const className =
+    "border bg-neutral-100 flex justify-center items-center p-2 rounded-sm transition-colors hover:bg-neutral-200";
+
+  if (to) {
+    return (
+      <NavLink to={to} aria-label={label} title={label} className={className}>
+        <Icon aria-hidden />
+      </NavLink>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!onClick}
+      aria-label={label}
+      title={label}
+      className={cn(className, "disabled:opacity-50")}
+    >
+      <Icon aria-hidden />
+    </button>
+  );
 }
 
 function Avatar({ src, name }) {
@@ -160,26 +285,26 @@ function Avatar({ src, name }) {
         // an avatar that 404s should not leave a broken-image icon in the
         // header. Drop to the initials instead.
         onError={(event) => {
-          event.currentTarget.style.display = 'none'
+          event.currentTarget.style.display = "none";
         }}
       />
-    )
+    );
   }
 
-  const initials = String(name ?? '')
+  const initials = String(name ?? "")
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0])
-    .join('')
-    .toUpperCase()
+    .join("")
+    .toUpperCase();
 
   return (
     <span
       aria-hidden
       className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground"
     >
-      {initials || '—'}
+      {initials || "—"}
     </span>
-  )
+  );
 }

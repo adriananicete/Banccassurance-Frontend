@@ -6,7 +6,6 @@ import {
   LuMessageSquare,
   LuPlus,
   LuShield,
-  LuUser,
   LuUserCheck,
   LuUsers,
 } from 'react-icons/lu'
@@ -100,11 +99,10 @@ export const NAV_ITEMS = [
     // Superadmin only -- including the roles that write rows to it.
     allowed: AUDIT_ROLES,
   },
-  {
-    to: paths.profile,
-    label: 'Profile',
-    Icon: LuUser,
-  },
+  // Profile is deliberately NOT here. It sits in the shell's Settings block at
+  // the foot of the sidebar, beside sign out -- the account and the way out of
+  // it are not places in the app the way the entries above are. Every role sees
+  // it, so nothing is lost by leaving it out of this role-filtered list.
 ]
 
 export function navItemsForRole(role) {
