@@ -46,10 +46,30 @@ const timeFormatter = new Intl.DateTimeFormat('en-PH', {
   hour12: true,
 })
 
+const weekdayDateFormatter = new Intl.DateTimeFormat('en-PH', {
+  timeZone: MANILA,
+  weekday: 'long',
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+})
+
 /** "10 Sep 2026". Returns `fallback` for null, undefined or an unparseable value. */
 export function formatDate(value, fallback = '—') {
   const date = toDate(value)
   return date ? dateFormatter.format(date) : fallback
+}
+
+/**
+ * "Friday, 11 September 2026". Defaults to today.
+ *
+ * For a screen heading rather than a data field -- it is the long, spelled-out
+ * form, and `formatDate` stays the one for rows and lists. Manila like the rest,
+ * so a viewer in another timezone reads the same day the data is filed under.
+ */
+export function formatWeekdayDate(value = new Date(), fallback = '—') {
+  const date = toDate(value)
+  return date ? weekdayDateFormatter.format(date) : fallback
 }
 
 /** "10 Sep 2026, 2:45 PM" -- in Manila, whatever the viewer's own timezone. */

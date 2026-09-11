@@ -13,6 +13,7 @@ import {
 import { AuthLayoutRoute } from '@/features/auth/pages/AuthLayoutRoute'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { VerifyOtpPage } from '@/features/auth/pages/VerifyOtpPage'
+import { DashboardPage } from '@/features/reports/pages/DashboardPage'
 import { ChooseTenantPage } from '@/features/users/pages/ChooseTenantPage'
 import { RegisterPage } from '@/features/users/pages/RegisterPage'
 import { GuestOnly } from '@/routes/GuestOnly'
@@ -83,13 +84,11 @@ export const router = createBrowserRouter([
             children: [
               {
                 path: paths.dashboard,
-                element: (
-                  <NotBuiltYet
-                    title="Dashboard"
-                    note="One call, fixed shape, no parameters — it is always all time, because one of the two procedures behind it takes no date."
-                    endpoints={['GET /reports/dashboard']}
-                  />
-                ),
+                // The only screen that differs per role rather than only being
+                // scoped per role, so the page picks the component. The roles
+                // whose view is not designed yet still get NotBuiltYet, from
+                // inside the page.
+                element: <DashboardPage />,
               },
               {
                 path: paths.referrals,
