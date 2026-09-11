@@ -87,9 +87,15 @@ const chartConfig = {
 export function ChartAreaDefault({
   className,
   total,
+  approved,
   description = "Total referrals · all time",
   data = chartData,
 }) {
+  // The headline counts what came IN. This counts what came OUT of it, which is
+  // the half a bare total cannot show: 310 referrals reads the same whether all
+  // 310 closed or none did.
+  const rate =
+    total > 0 && approved != null ? Math.round((approved / total) * 100) : null;
   return (
     <Card className={cn("h-full", className)}>
       <CardHeader>
@@ -105,6 +111,16 @@ export function ChartAreaDefault({
           {total?.toLocaleString() ?? "—"}
         </CardTitle>
         <CardDescription>{description}</CardDescription>
+
+        {rate != null ? (
+          <p className="text-xs font-medium">
+            {approved.toLocaleString()} approved
+            <span className="font-normal text-muted-foreground">
+              {" · "}
+              {rate}% conversion
+            </span>
+          </p>
+        ) : null}
       </CardHeader>
       {/* `flex-1 min-h-0` is what lets the chart shrink to whatever height is
           left after the header and footer. Without min-h-0 a flex child refuses

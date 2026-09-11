@@ -55,11 +55,32 @@ export function DashboardPage() {
  */
 const PLACEHOLDER = {
   total: 847,
+  /*
+    The outcome half. 96 + 78 + 88 = 262, and 262 of 847 is 31%.
+
+    Deliberately NOT in volume order: VisMin is the smallest region and the best
+    at closing, NCR is the biggest and middling. That is the whole argument for
+    ranking the panel by conversion -- in volume order the worst performer sits
+    at the bottom where nobody looks.
+  */
+  approved: 262,
+  /** Referrals with no status change in `stalledDays`. 12 + 31 + 6. */
+  stalled: 49,
+  stalledDays: 14,
+  /** Account Officers approved but holding no branches. One tier below the DH. */
+  unassignedOfficers: 3,
+  notifications: [
+    { id: 'n1', text: 'Ana Reyes approved 2 Area Sales Heads', at: '2026-09-11T01:40:00Z' },
+    { id: 'n2', text: 'VisMin passed 240 referrals', at: '2026-09-10T22:05:00Z' },
+    { id: 'n3', text: 'A Regional Sales Head registration is waiting for you', at: '2026-09-10T07:30:00Z' },
+  ],
   regions: [
     {
       code: 'NCR',
       name: 'NCR',
       total: 310,
+      approved: 96,
+      stalled: 12,
       headName: 'Juan Cruz',
       headUserCode: 'PHL-RSH-00001',
       // Sums to 310.
@@ -76,6 +97,8 @@ const PLACEHOLDER = {
       code: 'LUZ',
       name: 'Luzon',
       total: 295,
+      approved: 78,
+      stalled: 31,
       headName: 'Ana Reyes',
       headUserCode: 'PHL-RSH-00002',
       // Sums to 295.
@@ -92,6 +115,8 @@ const PLACEHOLDER = {
       code: 'VISMIN',
       name: 'VisMin',
       total: 242,
+      approved: 88,
+      stalled: 6,
       headName: null,
       headUserCode: null,
       // Sums to 242.
