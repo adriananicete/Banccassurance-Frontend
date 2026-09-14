@@ -19,6 +19,8 @@
  *   description    One sentence under the title: what is plotted, and where.
  *   empty          What to say when data is empty. Name the reason.
  *
+ *   sliderRange    { startIndex, endIndex }, or null. When given, a slider
+ *                  (Recharts Brush) sits under the axis and opens on that range.
  *   loading / error   Passed to DataPlaceholder in place of the chart.
  *   className      Passed to the Card. Give the card's wrapper an explicit
  *                  height; the chart fills whatever is left after the header
@@ -33,7 +35,7 @@
  */
 import { useId, useState } from "react";
 import { HiUserGroup } from "react-icons/hi";
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
+import { Area, AreaChart, Brush, CartesianGrid, XAxis } from "recharts";
 
 import { DataPlaceholder } from "@/components/DataPlaceholder";
 import {
@@ -77,6 +79,7 @@ export function ChartAreaGradient({
   title = "Referrals by month",
   description,
   empty = "No referrals recorded yet.",
+  sliderRange = null,
   loading = false,
   error = null,
   className,
@@ -207,6 +210,24 @@ export function ChartAreaGradient({
                   fill={`url(#${fillApproved})`}
                   fillOpacity={0.4}
                   stroke="var(--color-approved)"
+                />
+              ) : null}
+
+              {/* The slider under the axis -- All time only, where twelve months
+                  are laid out (Adrian). Drag the handles or the band to choose
+                  which months the chart above shows. Keyed on the range, so a
+                  new starting window resets it rather than keeping a stale drag. */}
+              {sliderRange ? (
+                <Brush
+                  key={`${sliderRange.startIndex}-${sliderRange.endIndex}`}
+                  dataKey="slot"
+                  height={24}
+                  travellerWidth={8}
+                  startIndex={sliderRange.startIndex}
+                  endIndex={sliderRange.endIndex}
+                  stroke="var(--color-referrals)"
+                  fill="var(--color-card)"
+                  tickFormatter={(slot) => formatMonthShort(monthAt(slot))}
                 />
               ) : null}
             </AreaChart>

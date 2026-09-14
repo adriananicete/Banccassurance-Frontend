@@ -11,6 +11,7 @@ import { manilaToday } from '@/lib/datetime'
 import { DepartmentHeadDashboard } from '../components/DepartmentHeadDashboard'
 import {
   ALL_REGIONS,
+  allTimeSliderRange,
   approvedFromByStatus,
   buildGroups,
   buildRegions,
@@ -63,8 +64,8 @@ export function DashboardPage() {
  *   /reports/summary?groupBy=REGION           every region's figures for the period;
  *                                             their sum is the tenant for any other period
  *   /reports/summary?groupBy=MONTH            the chart, for the tenant or the picked region,
- *                                             over the period (All time is cut to a
- *                                             five-month window in dashboardData)
+ *                                             over the period (All time is laid out
+ *                                             January to December in dashboardData)
  *   /reports/summary?groupBy=AREA  x regions  the Groups table, one call per region in view
  *   /users?role=REGIONAL_SALES_HEAD / AREA_SALES_HEAD   names, codes and photos
  *
@@ -77,6 +78,7 @@ function DepartmentHeadDashboardPage() {
   const [preset, setPreset] = useState(DATE_PRESET.ALL_TIME)
   const [selected, setSelected] = useState(ALL_REGIONS)
   const isAllTime = preset === DATE_PRESET.ALL_TIME
+  const currentMonth = manilaToday().slice(0, 7)
 
   const regionsLookup = useRegions()
   const dashboard = useReportsDashboard({ enabled: isAllTime })
@@ -146,7 +148,8 @@ function DepartmentHeadDashboardPage() {
       onSelect={setSelected}
       tenant={tenant}
       regions={regions}
-      monthly={chartMonths(preset, monthlySummary.data?.rows, manilaToday().slice(0, 7))}
+      monthly={chartMonths(preset, monthlySummary.data?.rows, currentMonth)}
+      sliderRange={isAllTime ? allTimeSliderRange(currentMonth) : null}
       groups={groups}
       summaryLoading={summaryLoading}
       summaryError={summaryError}

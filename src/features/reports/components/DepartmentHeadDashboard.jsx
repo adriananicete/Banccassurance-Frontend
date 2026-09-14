@@ -26,8 +26,10 @@
  *                included. Head fields MAY BE NULL: totals are grouped by
  *                geography, so a region can sit without a head.
  *   monthly      [{ month: "2026-09", referrals, approved }] for the tenant or
- *                the picked region, over the period. All time is a five-month
- *                window around now; months after now have null values.
+ *                the picked region, over the period. All time is January to
+ *                December of this year; months after now have null values.
+ *   sliderRange  { startIndex, endIndex } on All time -- the chart shows a
+ *                slider under the axis, opening on that range. Null otherwise.
  *   groups       [{ code, name, regionName, total, approved, headName,
  *                headUserCode, headAvatarSrc }] -- the groups in view. One Area
  *                Sales Head may hold several, so a name can repeat.
@@ -93,6 +95,7 @@ export function DepartmentHeadDashboard({
   tenant = { total: null, approved: null },
   regions = [],
   monthly = [],
+  sliderRange = null,
   groups = [],
   summaryLoading = false,
   summaryError = null,
@@ -157,6 +160,7 @@ export function DepartmentHeadDashboard({
             headlineLabel={`Total referrals · ${period}`}
             title="Referrals by month"
             description={`${scope.name} · ${period}`}
+            sliderRange={sliderRange}
             empty="No referrals in this period."
             loading={chartLoading}
             error={chartError}

@@ -30,16 +30,9 @@ export function toMonthly(rows = []) {
   })
 }
 
-/** "2026-09" moved by `offset` months -- "2026-07" for -2, "2027-01" for +4. */
-function shiftMonth(monthKey, offset) {
-  const [year, month] = monthKey.split('-').map(Number)
-  const date = new Date(Date.UTC(year, month - 1 + offset, 1))
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`
-}
-
 /**
- * How many months either side of the current one the All time chart shows.
- * Two: on 14 September that is July to November (Adrian, 2026-09-14).
+ * How many months either side of the current one the All time slider starts
+ * on. Two: on 14 September the slider opens on July to November.
  */
 const ALL_TIME_WINDOW = 2
 
@@ -54,11 +47,11 @@ const ALL_TIME_WINDOW = 2
  *   Last 6 months   April -> September
  *   This year       January -> September
  *
- * All time is a fixed five-month window around now -- two before, the current
- * month, two after -- so the axis does not stretch across years. Months before
- * the first referral read 0 (the backend's all-time rows start there, and
- * nothing existed earlier). Months after now are NULL, not 0: they have not
- * happened, so the line stops at the current month instead of dropping to zero.
+ * All time is JANUARY TO DECEMBER of the current year (Adrian, 2026-09-14),
+ * with a slider under the axis -- see `allTimeSliderRange`. Months before the
+ * first referral read 0 (nothing existed earlier); months after now are NULL,
+ * not 0: they have not happened, so the line stops at the current month
+ * instead of dropping to zero. Years before this one are not on this axis.
  *
  * No referrals at all answers rows: [] -- returned as [] so the chart shows
  * its empty message rather than a flat line.
@@ -68,14 +61,26 @@ export function chartMonths(preset, rows = [], currentMonth) {
   if (preset !== 'allTime' || series.length === 0) return series
 
   const byMonth = new Map(series.map((point) => [point.month, point]))
-  const window = []
-  for (let offset = -ALL_TIME_WINDOW; offset <= ALL_TIME_WINDOW; offset += 1) {
-    const month = shiftMonth(currentMonth, offset)
-    const point = byMonth.get(month)
-    if (offset > 0) window.push({ month, referrals: null, approved: null })
-    else window.push(point ?? { month, referrals: 0, approved: 0 })
+  const year = currentMonth.slice(0, 4)
+  const months = []
+  for (let index = 1; index <= 12; index += 1) {
+    const month = `${year}-${String(index).padStart(2, '0')}`
+    if (month > currentMonth) months.push({ month, referrals: null, approved: null })
+    else months.push(byMonth.get(month) ?? { month, referrals: 0, approved: 0 })
   }
-  return window
+  return months
+}
+
+/**
+ * Where the All time slider opens: two months either side of now, clamped to
+ * January and December. Indexes into `chartMonths`' twelve months.
+ */
+export function allTimeSliderRange(currentMonth) {
+  const index = Number(currentMonth.slice(5, 7)) - 1
+  return {
+    startIndex: Math.max(0, index - ALL_TIME_WINDOW),
+    endIndex: Math.min(11, index + ALL_TIME_WINDOW),
+  }
 }
 
 /** Figures for the whole tenant: the sum of every region row. */
