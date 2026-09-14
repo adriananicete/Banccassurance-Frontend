@@ -1,5 +1,6 @@
 import { STATUS, countForStatus, sumStatusCounts } from '@/constants/status'
 import { avatarUrl } from '@/lib/apiClient'
+import { toManilaDay } from '@/lib/datetime'
 
 /**
  * Turning /reports and /users responses into what the Department Head
@@ -28,6 +29,35 @@ export function toMonthly(rows = []) {
     const { total, approved } = toFigures(row)
     return { month: row.GroupCode, referrals: total, approved }
   })
+}
+
+/**
+ * The /reports/summary params for the chart's year: January through the
+ * current month for this year, January through December for a past one.
+ *
+ * `thisYear` already runs from 1 January to the end of the current month, and
+ * MONTH rows include zeros, so the axis always starts at January with nothing
+ * to gap-fill. A past year is a `custom` range, whose `dateTo` is inclusive.
+ */
+export function chartYearParams(year, currentYear) {
+  return year === currentYear
+    ? { preset: 'thisYear' }
+    : { preset: 'custom', dateFrom: `${year}-01-01`, dateTo: `${year}-12-31` }
+}
+
+/**
+ * The years the chart can show: from the year of the first referral to this
+ * year, oldest first. `firstMonthFrom` is `period.from` of an all-time MONTH
+ * summary -- the Manila start of the first referral's month, as a UTC instant.
+ * With no referrals yet, only this year.
+ */
+export function chartYears(firstMonthFrom, currentYear) {
+  const firstYear = firstMonthFrom
+    ? Number(toManilaDay(firstMonthFrom)?.slice(0, 4)) || currentYear
+    : currentYear
+  const years = []
+  for (let year = Math.min(firstYear, currentYear); year <= currentYear; year += 1) years.push(year)
+  return years
 }
 
 /** Figures for the whole tenant: the sum of every region row. */

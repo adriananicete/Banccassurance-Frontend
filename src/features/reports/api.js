@@ -34,10 +34,19 @@ export async function fetchDashboard() {
  *
  * Params left undefined are dropped by axios, so a missing parent or preset
  * is simply not sent. A call with no preset is all time, not this month.
+ * `dateFrom` / `dateTo` are read only with `preset=custom`: Manila days as
+ * YYYY-MM-DD, and `dateTo` is the last day INCLUDED.
  */
-export async function fetchSummary({ groupBy, preset, parentRegionCode, parentGroupCode }) {
+export async function fetchSummary({
+  groupBy,
+  preset,
+  parentRegionCode,
+  parentGroupCode,
+  dateFrom,
+  dateTo,
+}) {
   const { data } = await apiClient.get('/reports/summary', {
-    params: { groupBy, preset, parentRegionCode, parentGroupCode },
+    params: { groupBy, preset, parentRegionCode, parentGroupCode, dateFrom, dateTo },
   })
   return { groupBy: data.groupBy, period: data.period ?? null, rows: data.rows ?? [] }
 }

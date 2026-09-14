@@ -19,6 +19,9 @@
  *   description    One sentence under the title: what is plotted, and where.
  *   empty          What to say when data is empty. Name the reason.
  *
+ *   years / year / onYearChange   Optional. A year dropdown in the header, to
+ *                  the left of the compare toggle. Shown only when given.
+ *
  * Referrals are drawn alone by default; a "Compare with approved" toggle in
  * the header adds the approved series on top.
  *   loading / error   Passed to DataPlaceholder in place of the chart.
@@ -75,6 +78,9 @@ export function ChartAreaGradient({
   title = "Referrals by month",
   description,
   empty = "No referrals recorded yet.",
+  years = [],
+  year,
+  onYearChange,
   loading = false,
   error = null,
   className,
@@ -111,7 +117,10 @@ export function ChartAreaGradient({
   const monthAt = (slot) => plotted[Number(slot)]?.month;
   return (
     <Card className={cn("h-full", className)}>
-      <CardHeader>
+      {/* A rule under the header and over the footer, per Adrian, so the headline,
+          the chart and its caption read as three parts. Tighter than the Card
+          default so the fixed-height chart keeps its room. */}
+      <CardHeader className="border-b [.border-b]:pb-4">
         {/* The number is the headline and the words explain it. */}
         <CardTitle className="flex items-center gap-2 text-3xl font-semibold tabular-nums">
           {/* Decorative -- the label below already names the figure. */}
@@ -120,12 +129,33 @@ export function ChartAreaGradient({
         </CardTitle>
         {headlineLabel ? <CardDescription>{headlineLabel}</CardDescription> : null}
 
-        {/* Opposite the headline. A toggle, so it says whether it is on:
-            aria-pressed, and a green dot and tint -- the approved colour --
-            while the green series is showing. Hidden when there is no chart
-            to compare on. */}
-        {hasData && !loading && !error ? (
-          <CardAction>
+        {/* Opposite the headline: the year, then the compare toggle. The year
+            stays even with nothing to plot, so a different year can still be
+            picked; the toggle hides when there is no chart to compare on. */}
+        <CardAction className="flex items-center gap-2">
+          {years.length > 0 && onYearChange ? (
+            <>
+              <label htmlFor={`chart-year-${uid}`} className="sr-only">
+                Year
+              </label>
+              <select
+                id={`chart-year-${uid}`}
+                value={year}
+                onChange={(event) => onYearChange(Number(event.target.value))}
+                className="h-8 cursor-pointer rounded-md border border-input bg-background px-2.5 text-xs shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              >
+                {years.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : null}
+
+          {/* A toggle, so it says whether it is on -- aria-pressed and a muted
+              fill. Neutral, not green: Adrian took the colour off. */}
+          {hasData && !loading && !error ? (
             <button
               type="button"
               aria-pressed={showApproved}
@@ -133,21 +163,14 @@ export function ChartAreaGradient({
               className={cn(
                 "inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium shadow-xs transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
                 showApproved
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400"
+                  ? "border-input bg-muted text-foreground"
                   : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >
-              <span
-                aria-hidden
-                className={cn(
-                  "size-2 rounded-full",
-                  showApproved ? "bg-emerald-500 dark:bg-emerald-400" : "bg-muted-foreground/40",
-                )}
-              />
               Compare with approved
             </button>
-          </CardAction>
-        ) : null}
+          ) : null}
+        </CardAction>
       </CardHeader>
 
       {/* `flex-1 min-h-0` lets the chart shrink to what is left of the card.
@@ -216,7 +239,7 @@ export function ChartAreaGradient({
         )}
       </CardContent>
 
-      <CardFooter>
+      <CardFooter className="border-t [.border-t]:pt-4">
         <div className="grid gap-1.5 text-sm">
           <div className="leading-none font-medium">{title}</div>
           {description ? (

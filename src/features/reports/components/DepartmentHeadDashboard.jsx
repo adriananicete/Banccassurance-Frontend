@@ -26,7 +26,10 @@
  *                included. Head fields MAY BE NULL: totals are grouped by
  *                geography, so a region can sit without a head.
  *   monthly      [{ month: "2026-09", referrals, approved }] for the tenant or
- *                the picked region, over the period.
+ *                the picked region, for the chart's YEAR -- January through
+ *                now, or all twelve months of a past year. Not the period.
+ *   chartYear / chartYears / onChartYearChange   The chart's year dropdown.
+ *                `chartYears` runs from the first referral's year to now.
  *   groups       [{ code, name, regionName, total, approved, headName,
  *                headUserCode, headAvatarSrc }] -- the groups in view. One Area
  *                Sales Head may hold several, so a name can repeat.
@@ -92,6 +95,9 @@ export function DepartmentHeadDashboard({
   tenant = { total: null, approved: null },
   regions = [],
   monthly = [],
+  chartYear,
+  chartYears = [],
+  onChartYearChange,
   groups = [],
   summaryLoading = false,
   summaryError = null,
@@ -155,7 +161,10 @@ export function DepartmentHeadDashboard({
             headline={scope.total}
             headlineLabel={`Total referrals · ${period}`}
             title="Referrals by month"
-            description={`${scope.name} · ${period}`}
+            description={`${scope.name} · ${chartYear}`}
+            year={chartYear}
+            years={chartYears}
+            onYearChange={onChartYearChange}
             empty="No referrals in this period."
             loading={chartLoading}
             error={chartError}
