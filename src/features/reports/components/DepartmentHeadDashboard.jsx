@@ -692,12 +692,13 @@ function GroupsCard({ regions, selected, onSelect, preset, period, isCustom, loa
  *
  * Sized down with the Group column (Adrian): the name at text-xs, and the
  * secondary line -- user code here, region under a group -- a step smaller
- * again at 10px, so the muted text reads as secondary.
+ * again at 10px, so the muted text reads as secondary. The picture is sm (24px)
+ * to sit with the smaller text.
  */
 function HeadChip({ row }) {
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <UserAvatar src={row.headAvatarSrc} name={row.headName} size="md" />
+      <UserAvatar src={row.headAvatarSrc} name={row.headName} size="sm" />
       <div className="min-w-0">
         <div className={cn("truncate text-xs", row.headName ? "font-medium" : "text-muted-foreground")}>
           {row.headName ?? "No Area Sales Head"}
