@@ -17,6 +17,7 @@
  *   headlineLabel  The line under it. MUST NAME THE PERIOD the figure covers.
  *   title          What the chart is. Shown in the footer, under the chart.
  *   description    One sentence under the title: what is plotted, and where.
+ *   empty          What to say when data is empty. Name the reason.
  *   loading / error   Passed to DataPlaceholder in place of the chart.
  *   className      Passed to the Card. Give the card's wrapper an explicit
  *                  height; the chart fills whatever is left after the header
@@ -69,6 +70,7 @@ export function ChartAreaGradient({
   headlineLabel,
   title = "Referrals by month",
   description,
+  empty = "No referrals recorded yet.",
   loading = false,
   error = null,
   className,
@@ -81,6 +83,9 @@ export function ChartAreaGradient({
   const fillApproved = `fillApproved${uid}`;
 
   const hasData = data.length > 0;
+  // An area needs two points to have a shape. A single month -- "This month"
+  // -- would otherwise draw nothing at all, so give it dots.
+  const showDots = data.length === 1;
 
   return (
     <Card className={cn("h-full", className)}>
@@ -102,7 +107,7 @@ export function ChartAreaGradient({
           <DataPlaceholder
             loading={loading}
             error={error}
-            empty="No referrals recorded yet."
+            empty={empty}
             loadingLabel="Loading referrals..."
           />
         ) : (
@@ -144,6 +149,7 @@ export function ChartAreaGradient({
                 fill={`url(#${fillReferrals})`}
                 fillOpacity={0.4}
                 stroke="var(--color-referrals)"
+                dot={showDots}
               />
               <Area
                 dataKey="approved"
@@ -151,6 +157,7 @@ export function ChartAreaGradient({
                 fill={`url(#${fillApproved})`}
                 fillOpacity={0.4}
                 stroke="var(--color-approved)"
+                dot={showDots}
               />
             </AreaChart>
           </ChartContainer>

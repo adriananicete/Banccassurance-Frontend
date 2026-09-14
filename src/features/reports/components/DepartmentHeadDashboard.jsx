@@ -100,31 +100,39 @@ const PRESET_MONTHS = {
 };
 
 /**
- * Referrals in `scope` over the picked period, or null when it cannot be told.
+ * Referrals and approvals over the picked period, plus the months that make it
+ * up -- for the tenant or for one region.
  *
- * All time is the API's own total, never a sum of the months -- the two must
- * not be allowed to disagree. The others add up the monthly series, running to
+ * All time reads the API's own totals, never a sum of the months, so the two
+ * cannot disagree. The rolling presets add up the monthly series, running to
  * the end of the current Manila month like the backend's presets do. Custom
- * has no dates to read yet, so it answers null rather than a guess.
+ * has no dates to read yet, so it answers nulls rather than a guess.
  *
  * ⚠️ STAND-IN. The monthly series has no source (see DashboardPage), and
  * whether "Last 3 months" counts the current month is not written down in
  * presets.js -- this assumes it does. When wired, GET /reports/summary with the
- * same preset answers this directly and this function goes.
+ * same preset answers the totals directly and this function goes.
  */
-function totalForPreset(preset, scope) {
-  if (preset === DATE_PRESET.ALL_TIME) return scope.total ?? null;
-  if (preset === DATE_PRESET.CUSTOM) return null;
+function figuresFor(preset, { total, approved, monthly = [] }) {
+  if (preset === DATE_PRESET.ALL_TIME) {
+    return { total: total ?? null, approved: approved ?? null, monthly };
+  }
+  if (preset === DATE_PRESET.CUSTOM) {
+    return { total: null, approved: null, monthly: [] };
+  }
 
   const currentMonth = manilaToday().slice(0, 7);
-  const months = scope.monthly.filter((point) => point.month <= currentMonth);
-
+  const months = monthly.filter((point) => point.month <= currentMonth);
   const inPeriod =
     preset === DATE_PRESET.THIS_YEAR
       ? months.filter((point) => point.month.slice(0, 4) === currentMonth.slice(0, 4))
       : months.filter((point) => monthsBetween(point.month, currentMonth) < PRESET_MONTHS[preset]);
 
-  return inPeriod.reduce((sum, point) => sum + point.referrals, 0);
+  return {
+    total: inPeriod.reduce((sum, point) => sum + point.referrals, 0),
+    approved: inPeriod.reduce((sum, point) => sum + point.approved, 0),
+    monthly: inPeriod,
+  };
 }
 
 /** Whole calendar months from `from` to `to`, both "YYYY-MM". */
@@ -152,30 +160,29 @@ export function DepartmentHeadDashboard({
   const [selected, setSelected] = useState(ALL);
   const [preset, setPreset] = useState(DATE_PRESET.ALL_TIME);
 
+  const isCustom = preset === DATE_PRESET.CUSTOM;
+  const period = presetLabel(preset);
+
+  // Everything in the chart row follows the period: the tenant's figures, and
+  // each region's. `stalled` is left alone -- it is a count of referrals stuck
+  // right now, and its own label says so.
+  const tenant = figuresFor(preset, { total, approved, monthly });
+  const periodRegions = regions.map((region) => ({ ...region, ...figuresFor(preset, region) }));
+
   // `find` rather than trusting `selected`: if the regions change under a
   // selection that no longer exists, this falls back to everything instead of
   // rendering a blank number.
-  const activeRegion = regions.find((region) => region.code === selected) ?? null;
+  const activeRegion = periodRegions.find((region) => region.code === selected) ?? null;
 
-  // The region choice narrows the PLACE, never the period. Everything scoped
-  // below is still all time.
   const scope = activeRegion
-    ? {
-        name: activeRegion.name,
-        total: activeRegion.total,
-        approved: activeRegion.approved,
-        stalled: activeRegion.stalled,
-        monthly: activeRegion.monthly ?? [],
-      }
-    : { name: "All of PhilLife", total, approved, stalled, monthly };
-
-  // The headline above the chart follows the period picked beside Export, and
-  // the place picked in the region choice.
-  const periodTotal = totalForPreset(preset, scope);
+    ? { ...activeRegion }
+    : { name: "All of PhilLife", stalled, ...tenant };
 
   const rate = conversionRate(scope.approved, scope.total);
   const share =
-    activeRegion && total > 0 ? Math.round((activeRegion.total / total) * 100) : null;
+    activeRegion && tenant.total > 0
+      ? Math.round((activeRegion.total / tenant.total) * 100)
+      : null;
 
   return (
     // DOM order is the phone order: header, region choice, chart, the side
@@ -203,14 +210,15 @@ export function DepartmentHeadDashboard({
         <div className="h-[26rem] md:h-96">
           <ChartAreaGradient
             data={scope.monthly}
-            headline={periodTotal}
+            headline={scope.total}
             headlineLabel={
-              preset === DATE_PRESET.CUSTOM
+              isCustom
                 ? "Total referrals · pick a date range to see a total"
-                : `Total referrals · ${presetLabel(preset)}`
+                : `Total referrals · ${period}`
             }
             title="Referrals by month"
-            description={`${scope.name} · referred and approved, month by month`}
+            description={`${scope.name} · referred and approved, ${period}`}
+            empty={isCustom ? "Pick a date range to see the chart." : "No referrals in this period."}
             loading={loading}
             error={error}
           />
@@ -225,14 +233,18 @@ export function DepartmentHeadDashboard({
               scope={scope}
               share={share}
               rate={rate}
+              period={period}
+              isCustom={isCustom}
               stalledDays={stalledDays}
               loading={loading}
               error={error}
             />
           ) : (
             <RegionsCard
-              regions={regions}
-              total={total}
+              regions={periodRegions}
+              total={tenant.total}
+              period={period}
+              isCustom={isCustom}
               selected={selected}
               onSelect={setSelected}
               loading={loading}
@@ -262,14 +274,16 @@ export function DepartmentHeadDashboard({
 
 /**
  * One region's figures, in the slot the Regions list leaves when a region is
- * picked. All time, like everything else here -- the pick narrows the place.
+ * picked. Over the picked period, except Stalled, which is always "right now".
  */
-function OverviewCard({ scope, share, rate, stalledDays, loading, error }) {
+function OverviewCard({ scope, share, rate, period, isCustom, stalledDays, loading, error }) {
   return (
     <Card className="h-full">
       <CardHeader>
         <CardTitle>Overview</CardTitle>
-        <CardDescription>{scope.name} · all time</CardDescription>
+        <CardDescription>
+          {scope.name} · {period}
+        </CardDescription>
       </CardHeader>
       <CardContent className="min-h-0 flex-1 overflow-auto">
         {loading || error ? (
@@ -277,21 +291,23 @@ function OverviewCard({ scope, share, rate, stalledDays, loading, error }) {
         ) : (
           <div className="grid auto-rows-fr grid-cols-2 gap-3">
             <StatTile
-              label="Referrals · all time"
+              label={`Referrals · ${period}`}
               value={formatCount(scope.total)}
               icon={FileText}
               accent="total"
-              hint={share != null ? `${share}% of PhilLife` : null}
+              hint={
+                isCustom ? "Pick a date range" : share != null ? `${share}% of PhilLife` : null
+              }
             />
             <StatTile
-              label="Approved · all time"
+              label={`Approved · ${period}`}
               value={formatCount(scope.approved)}
               icon={CircleCheck}
               accent="done"
               hint={scope.total != null ? `Of ${formatCount(scope.total)} referrals` : null}
             />
             <StatTile
-              label="Conversion · all time"
+              label={`Conversion · ${period}`}
               value={rate != null ? `${rate}%` : null}
               icon={Percent}
               hint="Approved out of referred"
@@ -301,7 +317,7 @@ function OverviewCard({ scope, share, rate, stalledDays, loading, error }) {
               value={formatCount(scope.stalled)}
               icon={Clock}
               accent="queue"
-              hint={`No status change in ${stalledDays} days`}
+              hint="Right now, whatever the period"
             />
           </div>
         )}
@@ -311,9 +327,10 @@ function OverviewCard({ scope, share, rate, stalledDays, loading, error }) {
 }
 
 /**
- * The period, and the download of it. The period drives two things: the
- * headline total above the chart, and what Export data downloads. Nothing
- * else on the screen follows it -- the tiles, regions and chart stay all time.
+ * The period, and the download of it. The period drives the whole chart row --
+ * the headline total, the chart, and the Regions or Overview panel beside it --
+ * as well as what Export data downloads. The two lists below do not follow it:
+ * a queue and a feed are about now.
  */
 function ExportControl({ preset, onPresetChange, onExport }) {
   return (
@@ -493,7 +510,7 @@ function AttentionCard({
  * Each row is also the way into that region: pressing it picks it above, and
  * the picked row stays highlighted so the two controls cannot disagree.
  */
-function RegionsCard({ regions, total, selected, onSelect, loading, error }) {
+function RegionsCard({ regions, total, period, isCustom, selected, onSelect, loading, error }) {
   // Copy first: `sort` mutates, and this array is a prop.
   const ranked = [...regions].sort(
     (a, b) =>
@@ -504,7 +521,7 @@ function RegionsCard({ regions, total, selected, onSelect, loading, error }) {
     <Card className="h-full">
       <CardHeader>
         <CardTitle>Regions</CardTitle>
-        <CardDescription>Ranked by conversion · all time</CardDescription>
+        <CardDescription>Ranked by conversion · {period}</CardDescription>
       </CardHeader>
       <CardContent className="flex min-h-0 flex-1 flex-col overflow-auto">
         {loading || error || !total ? (
@@ -513,7 +530,11 @@ function RegionsCard({ regions, total, selected, onSelect, loading, error }) {
           <DataPlaceholder
             loading={loading}
             error={error}
-            empty="No referrals yet. Regional figures appear once branches start referring."
+            empty={
+              isCustom
+                ? "Pick a date range to see the regions."
+                : "No referrals in this period. Regional figures appear once branches refer."
+            }
             loadingLabel="Loading regions..."
           />
         ) : (
