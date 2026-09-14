@@ -37,11 +37,19 @@ export function DashboardPage() {
 /**
  * Stand-in for the response, shaped the way the real one will be read.
  *
- * The three regions are the three rows `banc.regions` actually holds. Each one
- * carries its own `monthly` set for the bar chart, and each set sums exactly to
- * that region's `total` -- 310, 295, 242 -- which themselves sum to 847. Keep it
- * that way when editing: a breakdown that does not add up to the figure beside
- * it is the first thing anyone checks.
+ * The three regions are the three rows `banc.regions` actually holds. EVERY
+ * BREAKDOWN HERE ADDS UP, and must keep adding up when edited -- a breakdown
+ * that disagrees with the figure beside it is the first thing anyone checks:
+ *
+ *   region totals     310 + 295 + 242 = 847
+ *   region approved    96 +  78 +  88 = 262
+ *   region stalled     12 +  31 +   6 =  49
+ *   each region's `monthly` sums to that region's total and approved
+ *   the tenant `monthly` is the three regions' months added together
+ *
+ * The series covers April to September 2026 and nothing before it, which is
+ * what lets it sum to an all-time total: it stands for a system that went live
+ * in April.
  *
  * The Regional Sales Head names are invented -- and note they do NOT come from
  * GET /reports/dashboard, whose breakdown is grouped by region rather than by
@@ -56,7 +64,7 @@ export function DashboardPage() {
 const PLACEHOLDER = {
   total: 847,
   /*
-    The outcome half. 96 + 78 + 88 = 262, and 262 of 847 is 31%.
+    The outcome half. 262 of 847 is 31%.
 
     Deliberately NOT in volume order: VisMin is the smallest region and the best
     at closing, NCR is the biggest and middling. That is the whole argument for
@@ -64,11 +72,20 @@ const PLACEHOLDER = {
     at the bottom where nobody looks.
   */
   approved: 262,
-  /** Referrals with no status change in `stalledDays`. 12 + 31 + 6. */
+  /** Referrals with no status change in `stalledDays`. */
   stalled: 49,
   stalledDays: 14,
   /** Account Officers approved but holding no branches. One tier below the DH. */
   unassignedOfficers: 3,
+  // The three regions below, month by month, added together.
+  monthly: [
+    { month: '2026-04', referrals: 110, approved: 33 },
+    { month: '2026-05', referrals: 125, approved: 37 },
+    { month: '2026-06', referrals: 138, approved: 41 },
+    { month: '2026-07', referrals: 149, approved: 46 },
+    { month: '2026-08', referrals: 160, approved: 51 },
+    { month: '2026-09', referrals: 165, approved: 54 },
+  ],
   notifications: [
     { id: 'n1', text: 'Ana Reyes approved 2 Area Sales Heads', at: '2026-09-11T01:40:00Z' },
     { id: 'n2', text: 'VisMin passed 240 referrals', at: '2026-09-10T22:05:00Z' },
@@ -83,14 +100,13 @@ const PLACEHOLDER = {
       stalled: 12,
       headName: 'Juan Cruz',
       headUserCode: 'PHL-RSH-00001',
-      // Sums to 310.
       monthly: [
-        { month: 'January', desktop: 40 },
-        { month: 'February', desktop: 45 },
-        { month: 'March', desktop: 50 },
-        { month: 'April', desktop: 55 },
-        { month: 'May', desktop: 60 },
-        { month: 'June', desktop: 60 },
+        { month: '2026-04', referrals: 40, approved: 12 },
+        { month: '2026-05', referrals: 45, approved: 14 },
+        { month: '2026-06', referrals: 50, approved: 15 },
+        { month: '2026-07', referrals: 55, approved: 17 },
+        { month: '2026-08', referrals: 60, approved: 19 },
+        { month: '2026-09', referrals: 60, approved: 19 },
       ],
     },
     {
@@ -101,14 +117,13 @@ const PLACEHOLDER = {
       stalled: 31,
       headName: 'Ana Reyes',
       headUserCode: 'PHL-RSH-00002',
-      // Sums to 295.
       monthly: [
-        { month: 'January', desktop: 40 },
-        { month: 'February', desktop: 45 },
-        { month: 'March', desktop: 48 },
-        { month: 'April', desktop: 52 },
-        { month: 'May', desktop: 55 },
-        { month: 'June', desktop: 55 },
+        { month: '2026-04', referrals: 40, approved: 10 },
+        { month: '2026-05', referrals: 45, approved: 11 },
+        { month: '2026-06', referrals: 48, approved: 12 },
+        { month: '2026-07', referrals: 52, approved: 14 },
+        { month: '2026-08', referrals: 55, approved: 15 },
+        { month: '2026-09', referrals: 55, approved: 16 },
       ],
     },
     {
@@ -119,14 +134,13 @@ const PLACEHOLDER = {
       stalled: 6,
       headName: null,
       headUserCode: null,
-      // Sums to 242.
       monthly: [
-        { month: 'January', desktop: 30 },
-        { month: 'February', desktop: 35 },
-        { month: 'March', desktop: 40 },
-        { month: 'April', desktop: 42 },
-        { month: 'May', desktop: 45 },
-        { month: 'June', desktop: 50 },
+        { month: '2026-04', referrals: 30, approved: 11 },
+        { month: '2026-05', referrals: 35, approved: 12 },
+        { month: '2026-06', referrals: 40, approved: 14 },
+        { month: '2026-07', referrals: 42, approved: 15 },
+        { month: '2026-08', referrals: 45, approved: 17 },
+        { month: '2026-09', referrals: 50, approved: 19 },
       ],
     },
   ],
