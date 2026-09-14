@@ -2,8 +2,9 @@
  * The Reports page for a tenant head (Department Head, Sector Head): referrals
  * by status for every place one level down, drilling further on a row click.
  *
- * Built from shadcn components (Adrian, 2026-09-14): Card, Breadcrumb, Table,
- * Select and Button for the period and export (via DashboardParts), Badge.
+ * Built from shadcn components (Adrian, 2026-09-14): Card (a row of status
+ * cards, then the table card), Breadcrumb, Table, Select and Button for the
+ * period and export (via DashboardParts), Badge.
  *
  * Presentational and CONTROLLED -- `pages/ReportsPage.jsx` owns the period and
  * the drill path, because both change the request.
@@ -112,6 +113,38 @@ export function StatusReport({
           exportError={exportError}
           scopeName={tenantName}
         />
+      </div>
+
+      {/* One card per status, above the table (Adrian): the totals of the rows
+          below -- the same figures as the table's footer row -- for the place
+          and period shown. Two across on a phone, four on a tablet, all eight
+          on a wide screen. */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
+        {STATUSES.map((status, index) => {
+          const count = totals.counts[index];
+          const share = totals.total > 0 ? Math.round((count / totals.total) * 100) : 0;
+
+          return (
+            <Card key={status.value} className="gap-1 py-3">
+              <CardHeader className="px-4">
+                <CardDescription className="truncate text-xs">{status.label}</CardDescription>
+                <CardTitle
+                  className={cn(
+                    "text-2xl font-semibold tabular-nums",
+                    count > 0 && statusText(index),
+                  )}
+                >
+                  {loading || error ? "—" : formatCount(count)}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4">
+                <span className="text-[10px] text-muted-foreground tabular-nums">
+                  {loading || error ? " " : `${share}% of ${formatCount(totals.total)}`}
+                </span>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       <Card className={cn(!isEmpty && "overflow-hidden pb-0")}>
