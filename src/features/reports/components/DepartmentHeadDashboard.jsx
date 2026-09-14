@@ -62,6 +62,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -693,13 +694,23 @@ function HeadChip({ row }) {
   );
 }
 
-/** Approved as a share of the group's referrals: a bar, and the figure beside it. */
+/**
+ * Approved as a share of the group's referrals: shadcn's Progress, and the
+ * figure beside it.
+ *
+ * #00bb7c is Adrian's colour for this bar, set here once and reached through
+ * the indicator's data-slot rather than by editing ui/progress.jsx. A group
+ * with no referrals passes 0, not null -- null would make Base UI draw an
+ * indeterminate bar, which reads as "loading".
+ */
 function ApprovalBar({ rate }) {
   return (
     <div className="flex items-center gap-2">
-      <div aria-hidden className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-        <div className="h-full rounded-full bg-primary" style={{ width: `${rate ?? 0}%` }} />
-      </div>
+      <Progress
+        value={rate ?? 0}
+        aria-label="Approved"
+        className="flex-1 [&_[data-slot=progress-indicator]]:bg-[#00bb7c]"
+      />
       <span className="w-9 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
         {rate != null ? `${rate}%` : "—"}
       </span>
