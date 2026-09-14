@@ -8,6 +8,7 @@ import {
   AUDIT_ROLES,
   MESSAGING_DENIED_ROLES,
   REFERRAL_CREATOR_ROLES,
+  REFERRAL_LIST_DENIED_ROLES,
   ROLES,
 } from '@/constants/roles'
 import { AuthLayoutRoute } from '@/features/auth/pages/AuthLayoutRoute'
@@ -27,6 +28,10 @@ import { ScaffoldHome } from './ScaffoldHome'
 
 const EVERY_ROLE_EXCEPT_SUPERADMIN = Object.values(ROLES).filter(
   (role) => role !== ROLES.SUPERADMIN,
+)
+
+const REFERRAL_LIST_ROLES = Object.values(ROLES).filter(
+  (role) => !REFERRAL_LIST_DENIED_ROLES.includes(role),
 )
 
 const MESSAGING_ROLES = Object.values(ROLES).filter(
@@ -91,22 +96,28 @@ export const router = createBrowserRouter([
                 element: <DashboardPage />,
               },
               {
-                path: paths.referrals,
-                element: (
-                  <NotBuiltYet
-                    title="Referrals"
-                    note="Paged, searchable, sortable and filterable — all server-side."
-                    endpoints={['GET /referrals', 'GET /referrals/counts']}
-                  />
-                ),
-              },
-              {
                 path: paths.reports,
                 element: (
                   <NotBuiltYet
                     title="Reports"
                     note="One call per drill-down expansion. Landbank walks AREA → BRANCH; PhilLife walks REGION → AREA → AO."
                     endpoints={['GET /reports/summary', 'GET /reports/export']}
+                  />
+                ),
+              },
+            ],
+          },
+
+          {
+            element: <RequireRole allowed={REFERRAL_LIST_ROLES} />,
+            children: [
+              {
+                path: paths.referrals,
+                element: (
+                  <NotBuiltYet
+                    title="Referrals"
+                    note="Paged, searchable, sortable and filterable — all server-side."
+                    endpoints={['GET /referrals', 'GET /referrals/counts']}
                   />
                 ),
               },

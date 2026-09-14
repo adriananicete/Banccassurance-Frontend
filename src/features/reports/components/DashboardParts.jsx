@@ -405,9 +405,13 @@ export function PlacesTable({
     />
   );
   const isEmpty = loading || error || ranked.length === 0;
+  // A paged table always ends in the grey footer band, even on one page.
+  const hasFooter = Boolean(pageSize) && !isEmpty;
 
   return (
-    <Card>
+    // The footer band sits flush with the card's bottom edge, so the card drops
+    // its bottom padding and clips the band to its rounded corners.
+    <Card className={cn(hasFooter && "overflow-hidden pb-0")}>
       {/* Title left, tabs right, level from md (Adrian). */}
       <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1.5">
@@ -420,12 +424,20 @@ export function PlacesTable({
       <CardContent>
         <div className="-mx-6 hidden md:block">
           <Table>
+            {/* Column titles on a light grey band, so they read as headings rather
+                than as the first row (Adrian). */}
             <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="pl-6 text-xs text-muted-foreground">{placeLabel}</TableHead>
-                <TableHead className="text-xs text-muted-foreground">{headLabel}</TableHead>
-                <TableHead className="w-[30%] text-xs text-muted-foreground">Approved</TableHead>
-                <TableHead className="pr-6 text-right text-xs text-muted-foreground">Referrals</TableHead>
+              <TableRow className="border-t bg-muted/60 hover:bg-muted/60">
+                <TableHead className="h-9 pl-6 text-xs font-medium text-muted-foreground">
+                  {placeLabel}
+                </TableHead>
+                <TableHead className="h-9 text-xs font-medium text-muted-foreground">{headLabel}</TableHead>
+                <TableHead className="h-9 w-[30%] text-xs font-medium text-muted-foreground">
+                  Approved
+                </TableHead>
+                <TableHead className="h-9 pr-6 text-right text-xs font-medium text-muted-foreground">
+                  Referrals
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -460,7 +472,7 @@ export function PlacesTable({
           </Table>
         </div>
 
-        <div className="-mx-6 divide-y border-y md:hidden">
+        <div className={cn("-mx-6 divide-y border-t md:hidden", !hasFooter && "border-b")}>
           {isEmpty ? (
             <div className="px-6 py-6 text-center">{emptyState}</div>
           ) : (
@@ -485,15 +497,18 @@ export function PlacesTable({
           )}
         </div>
 
-        {/* Paging -- shadcn's Pagination (Adrian): "Showing 1–10 of 136" on the
-            left (hidden on phones), Previous, page numbers, Next on the right. */}
-        {pageSize && !isEmpty && ranked.length > pageSize ? (
-          <div className="flex items-center justify-between gap-2 pt-3">
-            <span className="hidden shrink-0 text-xs text-muted-foreground tabular-nums sm:inline">
+        {/* The footer band -- light grey like the column titles (Adrian):
+            "Showing 1–10 of 136" on the left, shadcn's Pagination on the right.
+            Always there on a paged table; one page shows just "1". The paging is
+            done here over the rows already fetched -- the API returns every
+            branch in one go, so there is no page parameter to send. */}
+        {hasFooter ? (
+          <div className="-mx-6 flex min-h-12 items-center justify-between gap-3 border-t bg-muted/60 px-6 py-2">
+            <span className="hidden text-xs text-muted-foreground tabular-nums sm:inline">
               Showing {firstIndex + 1}–{Math.min(firstIndex + pageSize, ranked.length)} of{" "}
               {ranked.length}
             </span>
-            <Pagination className="mx-0 w-auto sm:justify-end">
+            <Pagination className="mx-0 w-full justify-center sm:w-auto sm:justify-end">
               <PaginationContent>
                 <PaginationItem>
                   <PaginationPrevious

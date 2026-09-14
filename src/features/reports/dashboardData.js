@@ -48,10 +48,11 @@ const ALL_TIME_WINDOW = 2
  *   This year       January -> September
  *
  * All time is JANUARY TO DECEMBER of the current year (Adrian, 2026-09-14),
- * with a slider under the axis -- see `allTimeSliderRange`. Months before the
- * first referral read 0 (nothing existed earlier); months after now are NULL,
- * not 0: they have not happened, so the line stops at the current month
- * instead of dropping to zero. Years before this one are not on this axis.
+ * with a slider under the axis -- see `allTimeSliderRange`. Every month with
+ * no referrals reads 0 -- before the first referral AND after now -- so the
+ * line runs unbroken across the whole year as one wave (Adrian, 2026-09-14,
+ * replacing a line that stopped at the current month). Years before this one
+ * are not on this axis.
  *
  * No referrals at all answers rows: [] -- returned as [] so the chart shows
  * its empty message rather than a flat line.
@@ -65,8 +66,7 @@ export function chartMonths(preset, rows = [], currentMonth) {
   const months = []
   for (let index = 1; index <= 12; index += 1) {
     const month = `${year}-${String(index).padStart(2, '0')}`
-    if (month > currentMonth) months.push({ month, referrals: null, approved: null })
-    else months.push(byMonth.get(month) ?? { month, referrals: 0, approved: 0 })
+    months.push(byMonth.get(month) ?? { month, referrals: 0, approved: 0 })
   }
   return months
 }
