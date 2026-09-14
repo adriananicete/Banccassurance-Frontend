@@ -142,19 +142,6 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/*
-  Hides a scrollbar while keeping the element scrollable. shadcn's CLI adds
-  this with the combobox, whose option list uses it; added by hand here
-  because the CLI cannot run on this network.
-*/
-@utility no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-  &::-webkit-scrollbar {
-    display: none;
-  }
-}
-
 @layer base {
   * {
     @apply border-border outline-ring/50;

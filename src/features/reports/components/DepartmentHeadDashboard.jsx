@@ -42,7 +42,6 @@ import { ChartPie, CircleCheck, Download, FileText, Percent } from "lucide-react
 import { TbChartAreaLine } from "react-icons/tb";
 
 import { ChartAreaGradient } from "@/components/charts/ChartAreaGradient";
-import { OptionCombobox } from "@/components/OptionCombobox";
 import { DataPlaceholder } from "@/components/DataPlaceholder";
 import { StatTile } from "@/components/StatTile";
 import { UserAvatar } from "@/components/UserAvatar";
@@ -288,15 +287,21 @@ function ExportControl({ preset, onPresetChange, onExport, isExporting, exportEr
   return (
     <div className="flex flex-col gap-1 sm:items-end">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <OptionCombobox
-          options={PERIOD_OPTIONS}
+        <label htmlFor="dashboard-export-period" className="sr-only">
+          Period
+        </label>
+        <select
+          id="dashboard-export-period"
           value={preset}
-          onChange={onPresetChange}
-          label="Period"
-          placeholder="Select a period"
-          emptyText="No periods found."
-          className="w-full sm:w-40"
-        />
+          onChange={(event) => onPresetChange(event.target.value)}
+          className="h-8 w-full cursor-pointer rounded-md border border-input bg-background px-2.5 text-xs shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:w-40"
+        >
+          {PERIOD_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
 
         <button
           type="button"

@@ -37,7 +37,6 @@ import { HiUserGroup } from "react-icons/hi";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 
 import { DataPlaceholder } from "@/components/DataPlaceholder";
-import { OptionCombobox } from "@/components/OptionCombobox";
 import {
   Card,
   CardAction,
@@ -135,15 +134,23 @@ export function ChartAreaGradient({
             picked; the toggle hides when there is no chart to compare on. */}
         <CardAction className="flex items-center gap-2">
           {years.length > 0 && onYearChange ? (
-            <OptionCombobox
-              options={years.map((option) => ({ value: option, label: String(option) }))}
-              value={year}
-              onChange={onYearChange}
-              label="Year"
-              placeholder="Year"
-              emptyText="No years found."
-              className="w-24"
-            />
+            <>
+              <label htmlFor={`chart-year-${uid}`} className="sr-only">
+                Year
+              </label>
+              <select
+                id={`chart-year-${uid}`}
+                value={year}
+                onChange={(event) => onYearChange(Number(event.target.value))}
+                className="h-8 cursor-pointer rounded-md border border-input bg-background px-2.5 text-xs shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              >
+                {years.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </>
           ) : null}
 
           {/* A toggle, so it says whether it is on -- aria-pressed and a muted
