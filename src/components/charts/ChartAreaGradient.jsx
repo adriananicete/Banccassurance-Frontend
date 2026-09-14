@@ -29,9 +29,8 @@
  * Referrals are drawn alone by default; a "Compare with approved" toggle in
  * the header adds the approved series on top.
  *
- * A point whose value is null is a month that has not happened yet: it keeps
- * its place on the axis but draws nothing, so the line ends at the last real
- * month rather than falling to zero.
+ * A point whose value is null keeps its place on the axis but draws nothing,
+ * breaking the line. The dashboards send 0 instead, so the line stays whole.
  */
 import { useId, useState } from "react";
 import { HiUserGroup } from "react-icons/hi";
