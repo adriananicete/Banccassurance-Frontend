@@ -71,7 +71,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DATE_PRESET, DATE_PRESETS } from "@/constants/presets";
-import { formatRelative } from "@/lib/datetime";
+import { formatRelative, manilaToday } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 import { paths } from "@/routes/paths";
 
@@ -86,6 +86,52 @@ function conversionRate(approved, total) {
 
 function formatCount(value) {
   return value == null ? null : value.toLocaleString("en-PH");
+}
+
+function presetLabel(value) {
+  return DATE_PRESETS.find((option) => option.value === value)?.label.toLowerCase() ?? "";
+}
+
+/** How many calendar months each rolling preset covers, current month included. */
+const PRESET_MONTHS = {
+  [DATE_PRESET.THIS_MONTH]: 1,
+  [DATE_PRESET.THREE_MONTHS]: 3,
+  [DATE_PRESET.SIX_MONTHS]: 6,
+};
+
+/**
+ * Referrals in `scope` over the picked period, or null when it cannot be told.
+ *
+ * All time is the API's own total, never a sum of the months -- the two must
+ * not be allowed to disagree. The others add up the monthly series, running to
+ * the end of the current Manila month like the backend's presets do. Custom
+ * has no dates to read yet, so it answers null rather than a guess.
+ *
+ * ⚠️ STAND-IN. The monthly series has no source (see DashboardPage), and
+ * whether "Last 3 months" counts the current month is not written down in
+ * presets.js -- this assumes it does. When wired, GET /reports/summary with the
+ * same preset answers this directly and this function goes.
+ */
+function totalForPreset(preset, scope) {
+  if (preset === DATE_PRESET.ALL_TIME) return scope.total ?? null;
+  if (preset === DATE_PRESET.CUSTOM) return null;
+
+  const currentMonth = manilaToday().slice(0, 7);
+  const months = scope.monthly.filter((point) => point.month <= currentMonth);
+
+  const inPeriod =
+    preset === DATE_PRESET.THIS_YEAR
+      ? months.filter((point) => point.month.slice(0, 4) === currentMonth.slice(0, 4))
+      : months.filter((point) => monthsBetween(point.month, currentMonth) < PRESET_MONTHS[preset]);
+
+  return inPeriod.reduce((sum, point) => sum + point.referrals, 0);
+}
+
+/** Whole calendar months from `from` to `to`, both "YYYY-MM". */
+function monthsBetween(from, to) {
+  const [fromYear, fromMonth] = from.split("-").map(Number);
+  const [toYear, toMonth] = to.split("-").map(Number);
+  return (toYear - fromYear) * 12 + (toMonth - fromMonth);
 }
 
 export function DepartmentHeadDashboard({
@@ -104,6 +150,7 @@ export function DepartmentHeadDashboard({
   onExport,
 }) {
   const [selected, setSelected] = useState(ALL);
+  const [preset, setPreset] = useState(DATE_PRESET.ALL_TIME);
 
   // `find` rather than trusting `selected`: if the regions change under a
   // selection that no longer exists, this falls back to everything instead of
@@ -121,6 +168,10 @@ export function DepartmentHeadDashboard({
         monthly: activeRegion.monthly ?? [],
       }
     : { name: "All of PhilLife", total, approved, stalled, monthly };
+
+  // The headline above the chart follows the period picked beside Export, and
+  // the place picked in the region choice.
+  const periodTotal = totalForPreset(preset, scope);
 
   const rate = conversionRate(scope.approved, scope.total);
   const share =
@@ -140,7 +191,7 @@ export function DepartmentHeadDashboard({
             </p>
           </div>
 
-          <ExportControl onExport={onExport} />
+          <ExportControl preset={preset} onPresetChange={setPreset} onExport={onExport} />
         </div>
 
         <RegionScope regions={regions} selected={selected} onSelect={setSelected} />
@@ -152,6 +203,12 @@ export function DepartmentHeadDashboard({
         <div className="h-[26rem] md:h-96">
           <ChartAreaGradient
             data={scope.monthly}
+            headline={periodTotal}
+            headlineLabel={
+              preset === DATE_PRESET.CUSTOM
+                ? "Total referrals · pick a date range to see a total"
+                : `Total referrals · ${presetLabel(preset)}`
+            }
             title="Referrals by month"
             description={`${scope.name} · referred and approved, month by month`}
             loading={loading}
@@ -254,24 +311,20 @@ function OverviewCard({ scope, share, rate, stalledDays, loading, error }) {
 }
 
 /**
- * THE PERIOD BELONGS TO THE EXPORT, not to the screen. Every figure here is
- * all time and cannot be narrowed -- the dashboard endpoint binds no date -- so
- * a period control standing alone would look like a filter that does nothing.
- * GET /reports/export does take these presets, so joined to the button it is
- * real.
+ * The period, and the download of it. The period drives two things: the
+ * headline total above the chart, and what Export data downloads. Nothing
+ * else on the screen follows it -- the tiles, regions and chart stay all time.
  */
-function ExportControl({ onExport }) {
-  const [preset, setPreset] = useState(DATE_PRESET.ALL_TIME);
-
+function ExportControl({ preset, onPresetChange, onExport }) {
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
       <label htmlFor="dashboard-export-period" className="sr-only">
-        Period to export
+        Period
       </label>
       <select
         id="dashboard-export-period"
         value={preset}
-        onChange={(event) => setPreset(event.target.value)}
+        onChange={(event) => onPresetChange(event.target.value)}
         className="h-8 w-full cursor-pointer rounded-md border border-input bg-background px-2.5 text-xs shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:w-40"
       >
         {DATE_PRESETS.map((option) => (

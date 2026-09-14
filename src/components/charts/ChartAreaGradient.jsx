@@ -11,19 +11,22 @@
  *
  * The props:
  *
- *   data         [{ month: "2026-04", referrals, approved }], oldest first.
- *   title        Card title. A noun.
- *   description  One sentence: what the chart shows AND over what period.
+ *   data           [{ month: "2026-04", referrals, approved }], oldest first.
+ *   headline       Number, or null. The big figure at the top of the card.
+ *                  Null renders an em dash rather than a zero.
+ *   headlineLabel  The line under it. MUST NAME THE PERIOD the figure covers.
+ *   title          What the chart is. Shown in the footer, under the chart.
+ *   description    One sentence under the title: what is plotted, and where.
  *   loading / error   Passed to DataPlaceholder in place of the chart.
- *   className    Passed to the Card. Give the card's wrapper an explicit
- *                height; the chart fills whatever is left after the header
- *                and footer.
+ *   className      Passed to the Card. Give the card's wrapper an explicit
+ *                  height; the chart fills whatever is left after the header
+ *                  and footer.
  *
  * ⚠️ THE MONTHLY SERIES HAS NO SOURCE IN THE API YET. See the note on
  * PLACEHOLDER in features/reports/pages/DashboardPage.jsx.
  */
 import { useId } from "react";
-import { TrendingUp } from "lucide-react";
+import { HiUserGroup } from "react-icons/hi";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 
 import { DataPlaceholder } from "@/components/DataPlaceholder";
@@ -62,6 +65,8 @@ const chartConfig = {
 
 export function ChartAreaGradient({
   data = [],
+  headline = null,
+  headlineLabel,
   title = "Referrals by month",
   description,
   loading = false,
@@ -77,20 +82,16 @@ export function ChartAreaGradient({
 
   const hasData = data.length > 0;
 
-  // Derived from the series itself, so the footer can never disagree with the
-  // shape above it.
-  const busiest = hasData
-    ? data.reduce((best, point) => (point.referrals > best.referrals ? point : best))
-    : null;
-  const average = hasData
-    ? Math.round(data.reduce((sum, point) => sum + point.referrals, 0) / data.length)
-    : null;
-
   return (
     <Card className={cn("h-full", className)}>
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        {description ? <CardDescription>{description}</CardDescription> : null}
+        {/* The number is the headline and the words explain it. */}
+        <CardTitle className="flex items-center gap-2 text-3xl font-semibold tabular-nums">
+          {/* Decorative -- the label below already names the figure. */}
+          <HiUserGroup aria-hidden className="size-7 text-muted-foreground" />
+          {loading || error || headline == null ? "—" : headline.toLocaleString("en-PH")}
+        </CardTitle>
+        {headlineLabel ? <CardDescription>{headlineLabel}</CardDescription> : null}
       </CardHeader>
 
       {/* `flex-1 min-h-0` lets the chart shrink to what is left of the card.
@@ -156,24 +157,14 @@ export function ChartAreaGradient({
         )}
       </CardContent>
 
-      {/* No "trending up by X%" line: there is no previous period to compare
-          against anywhere in the API. The footer carries what the series can
-          honestly answer instead -- the busiest month and the average. */}
-      {busiest && !loading && !error ? (
-        <CardFooter>
-          <div className="grid gap-1.5 text-sm">
-            <div className="flex items-center gap-2 leading-none font-medium">
-              Busiest in {formatMonthYear(busiest.month)} ·{" "}
-              {busiest.referrals.toLocaleString()} referrals
-              <TrendingUp aria-hidden className="size-4" />
-            </div>
-            <div className="leading-none text-muted-foreground">
-              Averaging {average.toLocaleString()} a month ·{" "}
-              {formatMonthYear(data[0].month)} – {formatMonthYear(data.at(-1).month)}
-            </div>
-          </div>
-        </CardFooter>
-      ) : null}
+      <CardFooter>
+        <div className="grid gap-1.5 text-sm">
+          <div className="leading-none font-medium">{title}</div>
+          {description ? (
+            <div className="leading-none text-muted-foreground">{description}</div>
+          ) : null}
+        </div>
+      </CardFooter>
     </Card>
   );
 }
