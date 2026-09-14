@@ -102,6 +102,15 @@ export function approvedFromByStatus(byStatus = []) {
   return byStatus.find((row) => row.Status === STATUS.APPROVED)?.Total ?? 0
 }
 
+/**
+ * Only an approved head labels a place (Adrian, 2026-09-14). /users?role=
+ * lists pending registrations too, with approved: false; until someone
+ * approves them the place reads as having no head.
+ */
+function isApproved(head) {
+  return head?.approved !== false
+}
+
 function headFields(head) {
   return {
     headName: head?.fullName ?? null,
@@ -126,6 +135,7 @@ export function buildRegions(lookupRegions = [], regionRows = [], regionalHeads 
   const rowsByName = new Map(regionRows.map((row) => [row.GroupName, row]))
   const headsByRegion = new Map()
   for (const head of regionalHeads) {
+    if (!isApproved(head)) continue
     const code = head.scope?.regionCode
     if (code != null && !headsByRegion.has(code)) headsByRegion.set(code, head)
   }
@@ -158,6 +168,7 @@ export function buildGroups(areaResults = [], areaHeads = [], regions = []) {
   const headsByGroup = new Map()
   const heldGroups = []
   for (const head of areaHeads) {
+    if (!isApproved(head)) continue
     for (const group of head.scope ?? []) {
       if (!headsByGroup.has(group.groupCode)) {
         headsByGroup.set(group.groupCode, head)
@@ -178,8 +189,88 @@ export function buildGroups(areaResults = [], areaHeads = [], regions = []) {
       code: Number(row.GroupCode),
       name: row.GroupName,
       regionName: regionNames.get(regionCode) ?? null,
+      parentName: regionNames.get(regionCode) ?? null,
       ...toFigures(row),
       ...headFields(headsByGroup.get(Number(row.GroupCode))),
+    }))
+  })
+}
+
+/*
+  ---------------------------------------------------------------------------
+  Landbank -- the Sector Head's dashboard, one tier down from the Department
+  Head's: groups where PhilLife has regions, branches where it has groups.
+  Landbank heads hold ONE place each, so a Group Head's or Branch Head's
+  scope is a single object (backend R6).
+  ---------------------------------------------------------------------------
+*/
+
+/**
+ * The Landbank groups under the given regions, for the Sector Head's Groups
+ * card. Like buildGroups: reaResults is one { regionCode, rows } per region
+ * from groupBy=AREA&parentRegionCode=, UNIONED with every group an approved
+ * Group Head holds in that region, so a group with a head and no referrals
+ * shows at 0. The head is the Group Head whose scope names the group.
+ */
+export function buildLandbankGroups(areaResults = [], groupHeads = [], regions = []) {
+  const regionNames = new Map(regions.map((region) => [region.code, region.name]))
+  const headsByGroup = new Map()
+  for (const head of groupHeads) {
+    const code = head.scope?.groupCode
+    if (isApproved(head) && code != null && !headsByGroup.has(code)) headsByGroup.set(code, head)
+  }
+
+  return areaResults.flatMap(({ regionCode, rows }) => {
+    const byCode = new Map(rows.map((row) => [Number(row.GroupCode), row]))
+    for (const [code, head] of headsByGroup) {
+      if (head.scope.regionCode === regionCode && !byCode.has(code)) {
+        byCode.set(code, { GroupCode: code, GroupName: head.scope.groupName })
+      }
+    }
+
+    return [...byCode.values()].map((row) => ({
+      code: Number(row.GroupCode),
+      name: row.GroupName,
+      regionCode,
+      parentName: regionNames.get(regionCode) ?? null,
+      ...toFigures(row),
+      ...headFields(headsByGroup.get(Number(row.GroupCode))),
+    }))
+  })
+}
+
+/**
+ * The branches under the given groups, for the Sector Head's Branches table.
+ * ranchResults is one { groupCode, rows } per group from
+ * groupBy=BRANCH&parentGroupCode=, UNIONED with every branch an approved
+ * Branch Head holds in that group. parentName is the group's name.
+ *
+ * On Landbank every referral carries a branch, so a group's branches add up to
+ * the group (backend F3 -- not true on PhilLife).
+ */
+export function buildBranches(branchResults = [], branchHeads = [], groups = []) {
+  const groupNames = new Map(groups.map((group) => [group.code, group.name]))
+  const headsByBranch = new Map()
+  for (const head of branchHeads) {
+    const code = head.scope?.branchCode
+    if (isApproved(head) && code != null && !headsByBranch.has(code)) headsByBranch.set(code, head)
+  }
+
+  return branchResults.flatMap(({ groupCode, rows }) => {
+    const byCode = new Map(rows.map((row) => [Number(row.GroupCode), row]))
+    for (const [code, head] of headsByBranch) {
+      if (head.scope.groupCode === groupCode && !byCode.has(code)) {
+        byCode.set(code, { GroupCode: code, GroupName: head.scope.branchName })
+      }
+    }
+
+    return [...byCode.values()].map((row) => ({
+      code: Number(row.GroupCode),
+      name: row.GroupName,
+      groupCode,
+      parentName: groupNames.get(groupCode) ?? null,
+      ...toFigures(row),
+      ...headFields(headsByBranch.get(Number(row.GroupCode))),
     }))
   })
 }
