@@ -129,7 +129,7 @@ export function DepartmentHeadDashboard({
   return (
     // DOM order is the phone order: header, region choice, chart, the side
     // panel, then the two lists. From lg the chart and the side panel share a
-    // row, two thirds to one third.
+    // row, three fifths to two fifths.
     <div className="flex w-full flex-col gap-5">
       <div className="flex flex-col gap-3">
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
@@ -146,10 +146,10 @@ export function DepartmentHeadDashboard({
         <RegionScope regions={regions} selected={selected} onSelect={setSelected} />
       </div>
 
-      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-3">
+      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[3fr_2fr]">
         {/* Explicit height, so the card inside fills it and the chart takes what
             is left, rather than the chart deciding the page's height. */}
-        <div className="h-[26rem] md:h-96 lg:col-span-2">
+        <div className="h-[26rem] md:h-96">
           <ChartAreaGradient
             data={scope.monthly}
             title="Referrals by month"
