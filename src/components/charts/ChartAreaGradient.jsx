@@ -87,6 +87,21 @@ export function ChartAreaGradient({
   // -- would otherwise draw nothing at all, so give it dots.
   const showDots = data.length === 1;
 
+  /*
+    Remount the chart whenever the series changes, rather than letting Recharts
+    animate from the old series to the new one.
+
+    Its update animation morphs the previous points into the next, tracked in
+    refs inside each <Area>. When the number of points changes -- six months to
+    one when "This month" is picked, or a region with a different span -- that
+    morph could leave the line and fill not drawn at all. The entrance
+    animation on a fresh mount has no previous points to match, and it is the
+    one that always drew correctly on first load.
+  */
+  const seriesKey = data
+    .map((point) => `${point.month}:${point.referrals}:${point.approved}`)
+    .join("|");
+
   return (
     <Card className={cn("h-full", className)}>
       <CardHeader>
@@ -114,7 +129,7 @@ export function ChartAreaGradient({
           // aspect-auto beats ChartContainer's default aspect-video, so the
           // chart follows the card's height rather than its own ratio.
           <ChartContainer config={chartConfig} className="aspect-auto h-full w-full">
-            <AreaChart accessibilityLayer data={data} margin={{ left: 12, right: 12, top: 8 }}>
+            <AreaChart key={seriesKey} accessibilityLayer data={data} margin={{ left: 12, right: 12, top: 8 }}>
               <CartesianGrid vertical={false} strokeDasharray="3 3" />
               <XAxis
                 dataKey="month"
