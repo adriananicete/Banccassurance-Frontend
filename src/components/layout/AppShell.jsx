@@ -1,7 +1,15 @@
-import { useState } from "react";
 import { LuLogOut, LuMenu, LuUser, LuX } from "react-icons/lu";
 import { NavLink } from "react-router";
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { formatWeekdayDate } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 import { paths } from "@/routes/paths";
@@ -51,10 +59,6 @@ export function AppShell({
   isLoggingOut,
   children,
 }) {
-  // Purely visual: whether the Settings group at the foot of the sidebar is
-  // showing its two items. Nothing outside this file cares, so it stays here
-  // rather than being lifted into AppLayout.
-  const [isSettingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
@@ -122,63 +126,50 @@ export function AppShell({
         </nav>
 
         {/* The two things that are not places in the app -- the account, and
-            the way out of it. They open upward so the trigger stays put. */}
-        <div className="w-full min-h-25 px-8 pb-4 flex flex-col justify-end items-stretch">
-          {isSettingsOpen ? (
-            <div className="flex flex-col gap-1 pb-2">
-              <NavLink
-                to={paths.profile}
-                onClick={onCloseSidebar}
-                className={({ isActive }) =>
-                  cn(
-                    // The negative margin cancels the padding, so the hover
-                    // block is wider than the text without shifting the label
-                    // out of line with Settings below it.
-                    "w-full flex items-center gap-2 -mx-2.5 px-2.5 rounded-md py-1.5 text-xs text-sidebar-foreground transition-colors",
-                    isActive
-                      ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-                      : "hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
-                  )
-                }
-              >
-                <LuUser aria-hidden className="size-3.5 shrink-0" />
-                <span className="truncate">Profile</span>
-              </NavLink>
+            the way out of it. A shadcn dropdown menu that opens upward, so the
+            trigger stays put at the foot of the sidebar. */}
+        <div className="w-full px-8 pb-4">
+          <DropdownMenu>
+            <DropdownMenuTrigger className="group w-full flex justify-between items-center -mx-2.5 px-2.5 rounded-md py-1.5 cursor-pointer text-sidebar-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground data-popup-open:bg-sidebar-accent">
+              <span className="flex justify-start items-center gap-2">
+                <IoSettingsOutline size={14} aria-hidden />
+                <span className="text-xs">Settings</span>
+              </span>
+              <IoIosArrowForward
+                size={14}
+                aria-hidden
+                className="rotate-90 transition-transform duration-200 group-data-popup-open:-rotate-90"
+              />
+            </DropdownMenuTrigger>
 
-              <button
-                type="button"
+            <DropdownMenuContent side="top" align="start" sideOffset={6}>
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>Account</DropdownMenuLabel>
+                {/* Rendered as the router link itself, so it is a real link --
+                    middle-click and "open in new tab" work. */}
+                <DropdownMenuItem
+                  render={<NavLink to={paths.profile} />}
+                  onClick={onCloseSidebar}
+                  className="text-xs"
+                >
+                  <LuUser aria-hidden className="size-3.5" />
+                  Profile
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem
+                variant="destructive"
                 onClick={onLogout}
                 disabled={isLoggingOut}
-                className="w-full flex items-center gap-2 -mx-2.5 px-2.5 rounded-md py-1.5 text-xs text-destructive/90 transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50 disabled:hover:bg-transparent"
+                className="text-xs"
               >
-                <LuLogOut aria-hidden className="size-3.5 shrink-0" />
-                <span className="truncate">
-                  {isLoggingOut ? "Signing out…" : "Sign out"}
-                </span>
-              </button>
-            </div>
-          ) : null}
-
-          <button
-            type="button"
-            onClick={() => setSettingsOpen((open) => !open)}
-            aria-expanded={isSettingsOpen}
-            className="w-full flex justify-between items-center -mx-2.5 px-2.5 rounded-md py-1.5 cursor-pointer text-sidebar-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
-          >
-            <div className="flex justify-start items-center gap-2">
-              <IoSettingsOutline size={14} />
-
-              <span className="text-xs">Settings</span>
-            </div>
-            <IoIosArrowForward
-              size={14}
-              aria-hidden
-              className={cn(
-                "transition-transform duration-200",
-                isSettingsOpen ? "-rotate-90" : "rotate-90",
-              )}
-            />
-          </button>
+                <LuLogOut aria-hidden className="size-3.5" />
+                {isLoggingOut ? "Signing out…" : "Sign out"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </aside>
 
