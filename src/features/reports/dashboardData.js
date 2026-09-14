@@ -102,6 +102,15 @@ export function approvedFromByStatus(byStatus = []) {
   return byStatus.find((row) => row.Status === STATUS.APPROVED)?.Total ?? 0
 }
 
+/**
+ * Only an approved head labels a place (Adrian, 2026-09-14). /users?role=
+ * lists pending registrations too, with approved: false; until someone
+ * approves them the place reads as having no head.
+ */
+function isApproved(head) {
+  return head?.approved !== false
+}
+
 function headFields(head) {
   return {
     headName: head?.fullName ?? null,
@@ -126,6 +135,7 @@ export function buildRegions(lookupRegions = [], regionRows = [], regionalHeads 
   const rowsByName = new Map(regionRows.map((row) => [row.GroupName, row]))
   const headsByRegion = new Map()
   for (const head of regionalHeads) {
+    if (!isApproved(head)) continue
     const code = head.scope?.regionCode
     if (code != null && !headsByRegion.has(code)) headsByRegion.set(code, head)
   }
@@ -158,6 +168,7 @@ export function buildGroups(areaResults = [], areaHeads = [], regions = []) {
   const headsByGroup = new Map()
   const heldGroups = []
   for (const head of areaHeads) {
+    if (!isApproved(head)) continue
     for (const group of head.scope ?? []) {
       if (!headsByGroup.has(group.groupCode)) {
         headsByGroup.set(group.groupCode, head)
@@ -178,8 +189,116 @@ export function buildGroups(areaResults = [], areaHeads = [], regions = []) {
       code: Number(row.GroupCode),
       name: row.GroupName,
       regionName: regionNames.get(regionCode) ?? null,
+      parentName: regionNames.get(regionCode) ?? null,
       ...toFigures(row),
       ...headFields(headsByGroup.get(Number(row.GroupCode))),
     }))
   })
+}
+
+/*
+  ---------------------------------------------------------------------------
+  Landbank -- the Sector Head's dashboard, one tier down from the Department
+  Head's: groups where PhilLife has regions, branches where it has groups.
+  Landbank heads hold ONE place each, so a Group Head's or Branch Head's
+  scope is a single object (backend R6).
+  ---------------------------------------------------------------------------
+*/
+
+/**
+ * EVERY Landbank group, for the Sector Head's Groups card -- all fifteen, at 0
+ * when a group has no referrals in the period (Adrian, 2026-09-14; backend F1).
+ *
+ * The list is /lookups/groups. Figures come from the groupBy=AREA rows, one
+ * { regionCode, rows } per region in view. The head is the approved Group Head
+ * whose scope names the group.
+ *
+ * Which region a group is in: the lookup's RegionCode once the backend adds it
+ * (R7); until then, the region whose AREA call returned the group, or its Group
+ * Head's scope. A group known by neither shows under "All regions" but cannot
+ * be placed under NCR, Luzon or VisMin -- that is the R7 gap, and it closes by
+ * itself when the lookup carries the region.
+ */
+export function buildLandbankGroups({
+  lookupGroups = [],
+  areaResults = [],
+  groupHeads = [],
+  regions = [],
+  regionCode = ALL_REGIONS,
+}) {
+  const regionNames = new Map(regions.map((region) => [region.code, region.name]))
+
+  const headsByGroup = new Map()
+  for (const head of groupHeads) {
+    const code = head.scope?.groupCode
+    if (isApproved(head) && code != null && !headsByGroup.has(code)) headsByGroup.set(code, head)
+  }
+
+  const rowsByGroup = new Map()
+  const regionByGroup = new Map()
+  for (const result of areaResults) {
+    for (const row of result.rows) {
+      rowsByGroup.set(Number(row.GroupCode), row)
+      regionByGroup.set(Number(row.GroupCode), result.regionCode)
+    }
+  }
+  for (const [code, head] of headsByGroup) {
+    if (head.scope.regionCode != null && !regionByGroup.has(code)) {
+      regionByGroup.set(code, head.scope.regionCode)
+    }
+  }
+
+  return [...lookupGroups]
+    .sort((a, b) => a.GroupCode - b.GroupCode)
+    .map((group) => {
+      const groupRegion = group.RegionCode ?? regionByGroup.get(group.GroupCode) ?? null
+      return {
+        code: group.GroupCode,
+        name: group.GroupName,
+        regionCode: groupRegion,
+        parentName: regionNames.get(groupRegion) ?? null,
+        ...toFigures(rowsByGroup.get(group.GroupCode)),
+        ...headFields(headsByGroup.get(group.GroupCode)),
+      }
+    })
+    .filter((group) => regionCode === ALL_REGIONS || group.regionCode === regionCode)
+}
+
+/**
+ * EVERY branch of the given groups, for the Sector Head's Branches table -- at
+ * 0 when a branch has no referrals in the period (Adrian, 2026-09-14).
+ *
+ *   branchLookups   [{ groupCode, branches }] from /lookups/branches?groupCode=
+ *   branchResults   [{ groupCode, rows }] from groupBy=BRANCH&parentGroupCode=
+ *
+ * `parentName` is the group's name. The head is the approved Branch Head whose
+ * scope names the branch. On Landbank every referral carries a branch, so a
+ * group's branches add up to the group (backend F3 -- not true on PhilLife).
+ */
+export function buildBranches({ branchLookups = [], branchResults = [], branchHeads = [], groups = [] }) {
+  const groupNames = new Map(groups.map((group) => [group.code, group.name]))
+
+  const headsByBranch = new Map()
+  for (const head of branchHeads) {
+    const code = head.scope?.branchCode
+    if (isApproved(head) && code != null && !headsByBranch.has(code)) headsByBranch.set(code, head)
+  }
+
+  const rowsByBranch = new Map()
+  for (const result of branchResults) {
+    for (const row of result.rows) rowsByBranch.set(Number(row.GroupCode), row)
+  }
+
+  return branchLookups.flatMap(({ groupCode, branches }) =>
+    [...branches]
+      .sort((a, b) => a.BranchName.localeCompare(b.BranchName))
+      .map((branch) => ({
+        code: branch.BranchCode,
+        name: branch.BranchName,
+        groupCode,
+        parentName: groupNames.get(groupCode) ?? null,
+        ...toFigures(rowsByBranch.get(branch.BranchCode)),
+        ...headFields(headsByBranch.get(branch.BranchCode)),
+      })),
+  )
 }

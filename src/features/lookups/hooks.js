@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQueries, useQuery } from '@tanstack/react-query'
 
 import { LOOKUP_STALE_TIME } from '@/lib/queryClient'
 import { queryKeys } from '@/lib/queryKeys'
@@ -43,6 +43,22 @@ export function useBranches(groupCode, { search } = {}) {
     enabled: Boolean(groupCode),
     staleTime: LOOKUP_STALE_TIME,
     select: (result) => result.rows,
+  })
+}
+
+/**
+ * Every branch of several groups at once -- one call per group, each cached on
+ * its own. The largest group holds 52 branches, so each call fits one page.
+ * Returns the useQueries array, in the order of `groupCodes`.
+ */
+export function useBranchesForGroups(groupCodes = []) {
+  return useQueries({
+    queries: groupCodes.map((groupCode) => ({
+      queryKey: queryKeys.lookups.branches({ groupCode }),
+      queryFn: () => fetchBranches({ groupCode }),
+      staleTime: LOOKUP_STALE_TIME,
+      select: (result) => result.rows,
+    })),
   })
 }
 

@@ -1,13 +1,24 @@
 import { useState } from 'react'
 import { Outlet, useLocation } from 'react-router'
 
+import landbankLogo from '@/assets/landbank-logo-png_seeklogo-351859.png'
+import philLifeLogo from '@/assets/PhilLife-Color-resize.png'
 import { AppShell } from '@/components/layout/AppShell'
-import { REACH, ROLE_LABELS } from '@/constants/roles'
+import { REACH, ROLE_LABELS, TENANT_LABELS, TENANTS, tenantOf } from '@/constants/roles'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useLogout } from '@/features/auth/hooks'
 import { avatarUrl } from '@/lib/apiClient'
 
 import { navItemsForRole } from './navigation'
+
+/**
+ * The header logo for each company. A superadmin belongs to neither, so gets
+ * none rather than one company's brand.
+ */
+const TENANT_LOGOS = {
+  [TENANTS.LANDBANK]: landbankLogo,
+  [TENANTS.PHILLIFE]: philLifeLogo,
+}
 
 /**
  * The container behind AppShell. Everything that reads the session or talks to
@@ -17,6 +28,9 @@ export function AppLayout() {
   const { user, profile } = useAuth()
   const logoutMutation = useLogout()
   const location = useLocation()
+
+  // The session's tenant, or the user code's prefix if it has not arrived.
+  const tenant = user?.tenant ?? tenantOf(user?.userCode)
 
   const [isSidebarOpen, setSidebarOpen] = useState(false)
 
@@ -36,6 +50,8 @@ export function AppLayout() {
       roleLabel={ROLE_LABELS[user?.role] ?? user?.role}
       userCode={user?.userCode}
       avatarSrc={avatarUrl(profile?.photo)}
+      logoSrc={TENANT_LOGOS[tenant] ?? null}
+      logoAlt={TENANT_LABELS[tenant] ?? ''}
       scopeWarning={scopeWarningFor(user)}
       isSidebarOpen={isSidebarOpen}
       onToggleSidebar={() => setSidebarOpen((open) => !open)}
