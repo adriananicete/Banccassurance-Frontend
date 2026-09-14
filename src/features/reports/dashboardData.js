@@ -1,6 +1,5 @@
 import { STATUS, countForStatus, sumStatusCounts } from '@/constants/status'
 import { avatarUrl } from '@/lib/apiClient'
-import { toManilaDay } from '@/lib/datetime'
 
 /**
  * Turning /reports and /users responses into what the Department Head
@@ -31,33 +30,52 @@ export function toMonthly(rows = []) {
   })
 }
 
-/**
- * The /reports/summary params for the chart's year: January through the
- * current month for this year, January through December for a past one.
- *
- * `thisYear` already runs from 1 January to the end of the current month, and
- * MONTH rows include zeros, so the axis always starts at January with nothing
- * to gap-fill. A past year is a `custom` range, whose `dateTo` is inclusive.
- */
-export function chartYearParams(year, currentYear) {
-  return year === currentYear
-    ? { preset: 'thisYear' }
-    : { preset: 'custom', dateFrom: `${year}-01-01`, dateTo: `${year}-12-31` }
+/** "2026-09" moved by `offset` months -- "2026-07" for -2, "2027-01" for +4. */
+function shiftMonth(monthKey, offset) {
+  const [year, month] = monthKey.split('-').map(Number)
+  const date = new Date(Date.UTC(year, month - 1 + offset, 1))
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`
 }
 
 /**
- * The years the chart can show: from the year of the first referral to this
- * year, oldest first. `firstMonthFrom` is `period.from` of an all-time MONTH
- * summary -- the Manila start of the first referral's month, as a UTC instant.
- * With no referrals yet, only this year.
+ * How many months either side of the current one the All time chart shows.
+ * Two: on 14 September that is July to November (Adrian, 2026-09-14).
  */
-export function chartYears(firstMonthFrom, currentYear) {
-  const firstYear = firstMonthFrom
-    ? Number(toManilaDay(firstMonthFrom)?.slice(0, 4)) || currentYear
-    : currentYear
-  const years = []
-  for (let year = Math.min(firstYear, currentYear); year <= currentYear; year += 1) years.push(year)
-  return years
+const ALL_TIME_WINDOW = 2
+
+/**
+ * The chart's series for the picked period, from a groupBy=MONTH summary
+ * asked for with the SAME preset.
+ *
+ * Every period but All time is exactly the months the backend returns, which
+ * already run to the current month and include zeros:
+ *   This month      September
+ *   Last 3 months   July -> September
+ *   Last 6 months   April -> September
+ *   This year       January -> September
+ *
+ * All time is a fixed five-month window around now -- two before, the current
+ * month, two after -- so the axis does not stretch across years. Months before
+ * the first referral read 0 (the backend's all-time rows start there, and
+ * nothing existed earlier). Months after now are NULL, not 0: they have not
+ * happened, so the line stops at the current month instead of dropping to zero.
+ *
+ * No referrals at all answers rows: [] -- returned as [] so the chart shows
+ * its empty message rather than a flat line.
+ */
+export function chartMonths(preset, rows = [], currentMonth) {
+  const series = toMonthly(rows)
+  if (preset !== 'allTime' || series.length === 0) return series
+
+  const byMonth = new Map(series.map((point) => [point.month, point]))
+  const window = []
+  for (let offset = -ALL_TIME_WINDOW; offset <= ALL_TIME_WINDOW; offset += 1) {
+    const month = shiftMonth(currentMonth, offset)
+    const point = byMonth.get(month)
+    if (offset > 0) window.push({ month, referrals: null, approved: null })
+    else window.push(point ?? { month, referrals: 0, approved: 0 })
+  }
+  return window
 }
 
 /** Figures for the whole tenant: the sum of every region row. */

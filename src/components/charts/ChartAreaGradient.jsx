@@ -19,18 +19,17 @@
  *   description    One sentence under the title: what is plotted, and where.
  *   empty          What to say when data is empty. Name the reason.
  *
- *   years / year / onYearChange   Optional. A year dropdown in the header, to
- *                  the left of the compare toggle. Shown only when given.
- *
- * Referrals are drawn alone by default; a "Compare with approved" toggle in
- * the header adds the approved series on top.
  *   loading / error   Passed to DataPlaceholder in place of the chart.
  *   className      Passed to the Card. Give the card's wrapper an explicit
  *                  height; the chart fills whatever is left after the header
  *                  and footer.
  *
- * ⚠️ THE MONTHLY SERIES HAS NO SOURCE IN THE API YET. See the note on
- * PLACEHOLDER in features/reports/pages/DashboardPage.jsx.
+ * Referrals are drawn alone by default; a "Compare with approved" toggle in
+ * the header adds the approved series on top.
+ *
+ * A point whose value is null is a month that has not happened yet: it keeps
+ * its place on the axis but draws nothing, so the line ends at the last real
+ * month rather than falling to zero.
  */
 import { useId, useState } from "react";
 import { HiUserGroup } from "react-icons/hi";
@@ -78,9 +77,6 @@ export function ChartAreaGradient({
   title = "Referrals by month",
   description,
   empty = "No referrals recorded yet.",
-  years = [],
-  year,
-  onYearChange,
   loading = false,
   error = null,
   className,
@@ -129,32 +125,11 @@ export function ChartAreaGradient({
         </CardTitle>
         {headlineLabel ? <CardDescription>{headlineLabel}</CardDescription> : null}
 
-        {/* Opposite the headline: the year, then the compare toggle. The year
-            stays even with nothing to plot, so a different year can still be
-            picked; the toggle hides when there is no chart to compare on. */}
+        {/* Opposite the headline: the compare toggle, hidden when there is no
+            chart to compare on. A toggle, so it says whether it is on --
+            aria-pressed and a muted fill. Neutral, not green: Adrian took the
+            colour off. */}
         <CardAction className="flex items-center gap-2">
-          {years.length > 0 && onYearChange ? (
-            <>
-              <label htmlFor={`chart-year-${uid}`} className="sr-only">
-                Year
-              </label>
-              <select
-                id={`chart-year-${uid}`}
-                value={year}
-                onChange={(event) => onYearChange(Number(event.target.value))}
-                className="h-8 cursor-pointer rounded-md border border-input bg-background px-2.5 text-xs shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-              >
-                {years.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </>
-          ) : null}
-
-          {/* A toggle, so it says whether it is on -- aria-pressed and a muted
-              fill. Neutral, not green: Adrian took the colour off. */}
           {hasData && !loading && !error ? (
             <button
               type="button"

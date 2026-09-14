@@ -14,10 +14,8 @@ import {
   approvedFromByStatus,
   buildGroups,
   buildRegions,
-  chartYearParams,
-  chartYears,
+  chartMonths,
   sumFigures,
-  toMonthly,
 } from '../dashboardData'
 import {
   useExportReferrals,
@@ -65,9 +63,8 @@ export function DashboardPage() {
  *   /reports/summary?groupBy=REGION           every region's figures for the period;
  *                                             their sum is the tenant for any other period
  *   /reports/summary?groupBy=MONTH            the chart, for the tenant or the picked region,
- *                                             for the picked YEAR -- not the period
- *   /reports/summary?groupBy=MONTH&preset=allTime   only its period.from: the
- *                                             first referral's year starts the year list
+ *                                             over the period (All time is cut to a
+ *                                             five-month window in dashboardData)
  *   /reports/summary?groupBy=AREA  x regions  the Groups table, one call per region in view
  *   /users?role=REGIONAL_SALES_HEAD / AREA_SALES_HEAD   names, codes and photos
  *
@@ -80,12 +77,6 @@ function DepartmentHeadDashboardPage() {
   const [preset, setPreset] = useState(DATE_PRESET.ALL_TIME)
   const [selected, setSelected] = useState(ALL_REGIONS)
   const isAllTime = preset === DATE_PRESET.ALL_TIME
-
-  // The chart follows a YEAR, not the period (Adrian, 2026-09-14): January to
-  // now for this year, the whole of a past one. The headline above it still
-  // follows the period.
-  const currentYear = Number(manilaToday().slice(0, 4))
-  const [chartYear, setChartYear] = useState(currentYear)
 
   const regionsLookup = useRegions()
   const dashboard = useReportsDashboard({ enabled: isAllTime })
@@ -107,14 +98,9 @@ function DepartmentHeadDashboardPage() {
 
   const monthlySummary = useReportSummary({
     groupBy: 'MONTH',
-    ...chartYearParams(chartYear, currentYear),
+    preset,
     parentRegionCode: isAllRegions ? undefined : activeCode,
   })
-
-  // Tenant-wide and all time, read only for where the data starts. The year
-  // list grows by itself: 2027 appears once it is 2027.
-  const firstMonth = useReportSummary({ groupBy: 'MONTH', preset: DATE_PRESET.ALL_TIME })
-  const years = chartYears(firstMonth.data?.period?.from, currentYear)
 
   const regionCodesInView = isAllRegions ? regions.map((region) => region.code) : [activeCode]
   const areaSummaries = useReportSummaries(
@@ -160,10 +146,7 @@ function DepartmentHeadDashboardPage() {
       onSelect={setSelected}
       tenant={tenant}
       regions={regions}
-      monthly={toMonthly(monthlySummary.data?.rows)}
-      chartYear={chartYear}
-      chartYears={years}
-      onChartYearChange={setChartYear}
+      monthly={chartMonths(preset, monthlySummary.data?.rows, manilaToday().slice(0, 7))}
       groups={groups}
       summaryLoading={summaryLoading}
       summaryError={summaryError}
