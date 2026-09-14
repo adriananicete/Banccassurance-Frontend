@@ -1,7 +1,8 @@
 /**
- * The Department Head's dashboard, laid out per context/FRONTEND_DESIGN_PATTERN.md
- * (the Dashboard archetype, §4): header, stat-tile card, a chart, the work
- * waiting on them, and an activity feed.
+ * The Department Head's dashboard, built on context/FRONTEND_DESIGN_PATTERN.md.
+ * Header, the region choice, then the chart with a side panel beside it --
+ * Regions while every region is showing, that region's Overview once one is
+ * picked -- and below them the work waiting on the DH and the activity feed.
  *
  * Presentational. `pages/DashboardPage.jsx` supplies every prop. Right now it
  * supplies HARDCODED numbers -- when the API is wired, only that file changes.
@@ -70,7 +71,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DATE_PRESET, DATE_PRESETS } from "@/constants/presets";
-import { formatRelative, formatWeekdayDate } from "@/lib/datetime";
+import { formatRelative } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 import { paths } from "@/routes/paths";
 
@@ -126,16 +127,16 @@ export function DepartmentHeadDashboard({
     activeRegion && total > 0 ? Math.round((activeRegion.total / total) * 100) : null;
 
   return (
-    // DOM order is the phone order. On lg it becomes two columns; the order
-    // happens to hold there too, so no `order-*` is needed.
-    <div className="flex w-full flex-col gap-5 lg:grid lg:grid-cols-2 lg:content-start">
-      <div className="flex flex-col gap-3 lg:col-span-2">
+    // DOM order is the phone order: header, region choice, chart, the side
+    // panel, then the two lists. From lg the chart and the side panel share a
+    // row, two thirds to one third.
+    <div className="flex w-full flex-col gap-5">
+      <div className="flex flex-col gap-3">
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <div>
             <h1 className="text-xl font-semibold md:text-2xl">Dashboard</h1>
-            {/* Manila, like every other date on screen. */}
             <p className="text-sm text-muted-foreground">
-              Where PhilLife stands, and which region is behind · {formatWeekdayDate()}
+              Where PhilLife stands, and which region is behind
             </p>
           </div>
 
@@ -145,84 +146,110 @@ export function DepartmentHeadDashboard({
         <RegionScope regions={regions} selected={selected} onSelect={setSelected} />
       </div>
 
-      <Card className="h-full">
-        <CardHeader>
-          <CardTitle>Overview</CardTitle>
-          <CardDescription>{scope.name} · all time</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading || error ? (
-            <DataPlaceholder loading={loading} error={error} loadingLabel="Loading figures..." />
+      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-3">
+        {/* Explicit height, so the card inside fills it and the chart takes what
+            is left, rather than the chart deciding the page's height. */}
+        <div className="h-[26rem] md:h-96 lg:col-span-2">
+          <ChartAreaGradient
+            data={scope.monthly}
+            title="Referrals by month"
+            description={`${scope.name} · referred and approved, month by month`}
+            loading={loading}
+            error={error}
+          />
+        </div>
+
+        {/* The slot beside the chart. With every region showing it is the way
+            INTO a region; once one is picked it becomes that region's figures.
+            Same height as the chart from lg, and scrolls inside if it must. */}
+        <div className="lg:h-96">
+          {activeRegion ? (
+            <OverviewCard
+              scope={scope}
+              share={share}
+              rate={rate}
+              stalledDays={stalledDays}
+              loading={loading}
+              error={error}
+            />
           ) : (
-            <div className="grid auto-rows-fr grid-cols-2 gap-3">
-              <StatTile
-                label="Referrals · all time"
-                value={formatCount(scope.total)}
-                icon={FileText}
-                accent="total"
-                hint={
-                  share != null ? `${share}% of PhilLife` : `Across ${regions.length} regions`
-                }
-              />
-              <StatTile
-                label="Approved · all time"
-                value={formatCount(scope.approved)}
-                icon={CircleCheck}
-                accent="done"
-                hint={scope.total != null ? `Of ${formatCount(scope.total)} referrals` : null}
-              />
-              <StatTile
-                label="Conversion · all time"
-                value={rate != null ? `${rate}%` : null}
-                icon={Percent}
-                hint="Approved out of referred"
-              />
-              <StatTile
-                label={`Stalled · ${stalledDays}+ days`}
-                value={formatCount(scope.stalled)}
-                icon={Clock}
-                accent="queue"
-                hint={`No status change in ${stalledDays} days`}
-              />
-            </div>
+            <RegionsCard
+              regions={regions}
+              total={total}
+              selected={selected}
+              onSelect={setSelected}
+              loading={loading}
+              error={error}
+            />
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <AttentionCard
-        pendingApprovals={pendingApprovals}
-        unassignedHeads={unassignedHeads}
-        unassignedOfficers={unassignedOfficers}
-        stalled={stalled}
-        stalledDays={stalledDays}
-        regions={regions}
-        loading={loading}
-        error={error}
-      />
-
-      {/* Explicit height, so the card inside fills it and the chart takes what
-          is left, rather than the chart deciding the page's height. */}
-      <div className="h-[26rem] md:h-96 lg:col-span-2">
-        <ChartAreaGradient
-          data={scope.monthly}
-          title="Referrals by month"
-          description={`${scope.name} · referred and approved, month by month`}
+      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-2">
+        <AttentionCard
+          pendingApprovals={pendingApprovals}
+          unassignedHeads={unassignedHeads}
+          unassignedOfficers={unassignedOfficers}
+          stalled={stalled}
+          stalledDays={stalledDays}
+          regions={regions}
           loading={loading}
           error={error}
         />
+
+        <ActivityCard notifications={notifications} loading={loading} error={error} />
       </div>
-
-      <RegionsCard
-        regions={regions}
-        total={total}
-        selected={selected}
-        onSelect={setSelected}
-        loading={loading}
-        error={error}
-      />
-
-      <ActivityCard notifications={notifications} loading={loading} error={error} />
     </div>
+  );
+}
+
+/**
+ * One region's figures, in the slot the Regions list leaves when a region is
+ * picked. All time, like everything else here -- the pick narrows the place.
+ */
+function OverviewCard({ scope, share, rate, stalledDays, loading, error }) {
+  return (
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle>Overview</CardTitle>
+        <CardDescription>{scope.name} · all time</CardDescription>
+      </CardHeader>
+      <CardContent className="min-h-0 flex-1 overflow-auto">
+        {loading || error ? (
+          <DataPlaceholder loading={loading} error={error} loadingLabel="Loading figures..." />
+        ) : (
+          <div className="grid auto-rows-fr grid-cols-2 gap-3">
+            <StatTile
+              label="Referrals · all time"
+              value={formatCount(scope.total)}
+              icon={FileText}
+              accent="total"
+              hint={share != null ? `${share}% of PhilLife` : null}
+            />
+            <StatTile
+              label="Approved · all time"
+              value={formatCount(scope.approved)}
+              icon={CircleCheck}
+              accent="done"
+              hint={scope.total != null ? `Of ${formatCount(scope.total)} referrals` : null}
+            />
+            <StatTile
+              label="Conversion · all time"
+              value={rate != null ? `${rate}%` : null}
+              icon={Percent}
+              hint="Approved out of referred"
+            />
+            <StatTile
+              label={`Stalled · ${stalledDays}+ days`}
+              value={formatCount(scope.stalled)}
+              icon={Clock}
+              accent="queue"
+              hint={`No status change in ${stalledDays} days`}
+            />
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -245,7 +272,7 @@ function ExportControl({ onExport }) {
         id="dashboard-export-period"
         value={preset}
         onChange={(event) => setPreset(event.target.value)}
-        className="h-9 w-full cursor-pointer rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:w-40"
+        className="h-8 w-full cursor-pointer rounded-md border border-input bg-background px-2.5 text-xs shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:w-40"
       >
         {DATE_PRESETS.map((option) => (
           <option key={option.value} value={option.value}>
@@ -257,9 +284,9 @@ function ExportControl({ onExport }) {
       <button
         type="button"
         onClick={() => onExport?.(preset)}
-        className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs transition-colors hover:bg-primary/90 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+        className="inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground shadow-xs transition-colors hover:bg-primary/90 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
       >
-        <Download aria-hidden className="size-4" />
+        <Download aria-hidden className="size-3.5" />
         Export data
       </button>
     </div>
@@ -426,7 +453,7 @@ function RegionsCard({ regions, total, selected, onSelect, loading, error }) {
         <CardTitle>Regions</CardTitle>
         <CardDescription>Ranked by conversion · all time</CardDescription>
       </CardHeader>
-      <CardContent className="flex min-h-0 flex-1 flex-col">
+      <CardContent className="flex min-h-0 flex-1 flex-col overflow-auto">
         {loading || error || !total ? (
           // Not three rows of zeroes. A column of zeroes reads as a broken
           // query rather than as "nothing yet".

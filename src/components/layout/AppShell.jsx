@@ -2,6 +2,7 @@ import { useState } from "react";
 import { LuLogOut, LuMenu, LuUser, LuX } from "react-icons/lu";
 import { NavLink } from "react-router";
 
+import { formatWeekdayDate } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 import { paths } from "@/routes/paths";
 import logo from "../../assets/PhilLife-Color-resize.png";
@@ -201,6 +202,12 @@ export function AppShell({
           </button>
 
           <div className="ml-auto flex items-center gap-2 pr-3">
+            {/* Today, in Manila like every other date on screen. Hidden on
+                phones, where the header has no room beside the logo. */}
+            <span className="mr-2 hidden text-xs text-muted-foreground md:inline">
+              {formatWeekdayDate()}
+            </span>
+
             {/* Messages deliberately has no `to` yet -- see the note on
                 HeaderIconButton. Three roles get a 403 on every /messages
                 endpoint, and this header is not filtered by role the way the
