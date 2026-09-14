@@ -504,7 +504,10 @@ function RegionsCard({ regions, total, period, isCustom, selected, onSelect, loa
                         </div>
                       </div>
                       <div className="shrink-0 text-right">
-                        <div className="font-medium tabular-nums">
+                        {/* Blue, Adrian's colour for referrals -- the same blue as
+                            the chart's referrals line. Lighter in dark mode,
+                            where #155dfc is too deep to read on the card. */}
+                        <div className="font-medium tabular-nums text-[#155dfc] dark:text-blue-400">
                           {region.total.toLocaleString("en-PH")}
                         </div>
                         <div className="text-xs text-muted-foreground">referrals</div>
@@ -513,13 +516,14 @@ function RegionsCard({ regions, total, period, isCustom, selected, onSelect, loa
 
                     {/* The bar is the conversion rate, matching the ranking, so
                         the two can never disagree. The line under it says the
-                        same figure in words. shadcn's Progress in #155dfc,
-                        Adrian's colour for this card; 0 rather than null so
-                        an empty region never draws as indeterminate. */}
+                        same figure in words. shadcn's Progress in #00bb7c --
+                        green for approved, as in the Groups table; 0 rather
+                        than null so an empty region never draws as
+                        indeterminate. */}
                     <Progress
                       value={rate ?? 0}
                       aria-label={`${region.name} approved`}
-                      className="w-full [&_[data-slot=progress-indicator]]:bg-[#155dfc]"
+                      className="w-full [&_[data-slot=progress-indicator]]:bg-[#00bb7c]"
                     />
 
                     <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
