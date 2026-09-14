@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import { DATE_PRESET } from '@/constants/presets'
 import { ROLES } from '@/constants/roles'
-import { useRegions } from '@/features/lookups/hooks'
+import { useBranchesForGroups, useGroups, useRegions } from '@/features/lookups/hooks'
 import { useHeadsByRole } from '@/features/users/hooks'
 import { manilaToday } from '@/lib/datetime'
 
@@ -33,12 +33,15 @@ import {
  *
  * Requests, and why each exists:
  *   /lookups/regions                         the region buttons, zero regions included
+ *   /lookups/groups                          EVERY group, so an empty one shows at 0
+ *   /lookups/branches?groupCode= x groups    EVERY branch of the groups shown, at 0 if empty
  *   /reports/dashboard                       the all-time total -- only on "All time"
  *   /reports/summary?groupBy=REGION          every region's figures; their sum is
  *                                            Landbank for any other period
  *   /reports/summary?groupBy=AREA x regions  the groups in the regions shown
  *   /reports/summary?groupBy=MONTH           the chart, for Landbank, a region or a group
- *   /reports/summary?groupBy=BRANCH x groups the branches in the groups shown
+ *   /reports/summary?groupBy=BRANCH x groups figures for the branches -- only for groups
+ *                                            that have branches (Luzon and VisMin have none)
  *   /users?role=GROUP_HEAD / BRANCH_HEAD     names, codes and photos (backend R6)
  *
  * Absent rows are zero (backend F1): every list starts from a lookup or a
@@ -54,6 +57,7 @@ export function SectorHeadDashboardPage() {
   const currentMonth = manilaToday().slice(0, 7)
 
   const regionsLookup = useRegions()
+  const groupsLookup = useGroups()
   const dashboard = useReportsDashboard({ enabled: isAllTime })
   const regionSummary = useReportSummary({ groupBy: 'REGION', preset })
   const groupHeads = useHeadsByRole(ROLES.GROUP_HEAD)
@@ -70,14 +74,16 @@ export function SectorHeadDashboardPage() {
   const areaSummaries = useReportSummaries(
     regionCodesInView.map((code) => ({ groupBy: 'AREA', preset, parentRegionCode: code })),
   )
-  const groups = buildLandbankGroups(
-    areaSummaries.map((query, index) => ({
+  const groups = buildLandbankGroups({
+    lookupGroups: groupsLookup.data,
+    areaResults: areaSummaries.map((query, index) => ({
       regionCode: regionCodesInView[index],
       rows: query.data?.rows ?? [],
     })),
-    groupHeads.data,
+    groupHeads: groupHeads.data,
     regions,
-  )
+    regionCode: activeRegionCode,
+  })
 
   // A picked group that is no longer in view falls back to the Groups list.
   const activeGroup = groups.find((group) => group.code === selectedGroup) ?? null
@@ -91,17 +97,29 @@ export function SectorHeadDashboardPage() {
   })
 
   const groupCodesInView = activeGroup ? [activeGroup.code] : groups.map((group) => group.code)
-  const branchSummaries = useReportSummaries(
-    groupCodesInView.map((code) => ({ groupBy: 'BRANCH', preset, parentGroupCode: code })),
+  const branchLookups = useBranchesForGroups(groupCodesInView)
+
+  // Figures only where there are branches to have them -- twelve of the fifteen
+  // groups hold none yet, and asking for their branches would be twelve empty calls.
+  const groupsWithBranches = groupCodesInView.filter(
+    (code, index) => (branchLookups[index].data?.length ?? 0) > 0,
   )
-  const branches = buildBranches(
-    branchSummaries.map((query, index) => ({
-      groupCode: groupCodesInView[index],
+  const branchSummaries = useReportSummaries(
+    groupsWithBranches.map((code) => ({ groupBy: 'BRANCH', preset, parentGroupCode: code })),
+  )
+
+  const branches = buildBranches({
+    branchLookups: groupCodesInView.map((code, index) => ({
+      groupCode: code,
+      branches: branchLookups[index].data ?? [],
+    })),
+    branchResults: branchSummaries.map((query, index) => ({
+      groupCode: groupsWithBranches[index],
       rows: query.data?.rows ?? [],
     })),
-    branchHeads.data,
+    branchHeads: branchHeads.data,
     groups,
-  )
+  })
 
   const tenant =
     isAllTime && dashboard.data
@@ -113,8 +131,8 @@ export function SectorHeadDashboardPage() {
   const firstError = (...queries) => queries.find((query) => query.error)?.error ?? null
 
   const summaryQueries = [regionsLookup, regionSummary, ...(isAllTime ? [dashboard] : [])]
-  const groupQueries = [regionsLookup, groupHeads, ...areaSummaries]
-  const branchQueries = [...groupQueries, branchHeads, ...branchSummaries]
+  const groupQueries = [regionsLookup, groupsLookup, groupHeads, ...areaSummaries]
+  const branchQueries = [...groupQueries, branchHeads, ...branchLookups, ...branchSummaries]
 
   const exportReferrals = useExportReferrals()
 

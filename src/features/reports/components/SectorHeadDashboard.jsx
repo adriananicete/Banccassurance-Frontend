@@ -146,8 +146,8 @@ export function SectorHeadDashboard({
               noHeadLabel="No Group Head assigned"
               emptyText={
                 activeRegion
-                  ? `No groups with referrals or a Group Head in ${activeRegion.name} in this period.`
-                  : "No referrals in this period. Group figures appear once branches refer."
+                  ? `No groups can be placed in ${activeRegion.name} yet.`
+                  : "No groups to show."
               }
             />
           )}
@@ -167,7 +167,7 @@ export function SectorHeadDashboard({
         noHeadLabel="No Branch Head"
         showParent={!activeGroup}
         tabs={regionTabs}
-        emptyText="No branches with referrals or a Branch Head here yet."
+        emptyText={activeGroup ? `${activeGroup.name} has no branches yet.` : "No branches here yet."}
         pageSize={10}
       />
     </div>

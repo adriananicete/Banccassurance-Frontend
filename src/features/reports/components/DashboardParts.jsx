@@ -269,8 +269,9 @@ export function PlacesCard({
         <CardDescription>Ranked by conversion · {period}</CardDescription>
       </CardHeader>
       <CardContent className="flex min-h-0 flex-1 flex-col overflow-auto">
-        {loading || error || !total || items.length === 0 ? (
-          // Not rows of zeroes -- a column of zeroes reads as a broken query.
+        {loading || error || items.length === 0 ? (
+          // Every place is listed, at 0 when it has no referrals (Adrian,
+          // 2026-09-14). The message is only for loading, an error, or no places.
           <DataPlaceholder
             loading={loading}
             error={error}
