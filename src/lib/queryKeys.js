@@ -38,6 +38,8 @@ export const queryKeys = {
 
   users: {
     all: ['users'],
+    /** GET /users?role= -- the Regional or Area Sales Heads. */
+    byRole: (role) => ['users', 'by-role', role],
     approvals: (params) => ['users', 'approvals', params ?? {}],
     assignableBranches: (params) => ['users', 'assignable-branches', params ?? {}],
     branches: (userId) => ['users', userId, 'branches'],

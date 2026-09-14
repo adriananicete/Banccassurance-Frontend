@@ -1,8 +1,22 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 
+import { LOOKUP_STALE_TIME } from '@/lib/queryClient'
 import { queryKeys } from '@/lib/queryKeys'
 
-import { checkEmail, register } from './api'
+import { checkEmail, fetchHeadsByRole, register } from './api'
+
+/**
+ * The Regional or Area Sales Heads, with photo and scope. Held like reference
+ * data: who heads what changes when someone is assigned, not minute to minute.
+ */
+export function useHeadsByRole(role, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: queryKeys.users.byRole(role),
+    queryFn: () => fetchHeadsByRole(role),
+    enabled,
+    staleTime: LOOKUP_STALE_TIME,
+  })
+}
 
 export function useRegisterUser() {
   return useMutation({ mutationFn: register })

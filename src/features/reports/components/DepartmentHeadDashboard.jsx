@@ -4,8 +4,10 @@
  * Regions while every region is showing, that region's Overview once one is
  * picked -- and below them a table of the groups under the regions.
  *
- * Presentational. `pages/DashboardPage.jsx` supplies every prop. Right now it
- * supplies HARDCODED numbers -- when the API is wired, only that file changes.
+ * Presentational and CONTROLLED. `pages/DashboardPage.jsx` owns the period and
+ * the region, because both change which requests are made, and hands down
+ * figures already shaped for the period by `../dashboardData.js`. Nothing here
+ * computes a period.
  *
  * WHAT THIS SCREEN IS FOR. A Department Head oversees the whole PhilLife
  * tenant. They do not refer and do not work referrals -- an Account Officer
@@ -14,40 +16,26 @@
  *
  * The props contract:
  *
- *   total        Number. Every referral in PhilLife. ALWAYS ALL TIME -- there
- *                is no date filter and there cannot be one, because one of the
- *                two stored procedures behind the endpoint takes no date. Every
- *                label on screen says so, or the number reads as "this month".
- *   approved     Number. How many of `total` reached Approved. The half a bare
- *                total cannot show: 310 referrals reads the same whether all
- *                310 closed or none did.
- *   stalled      Number, with `stalledDays`. Referrals whose status has not
- *                moved in that long.
- *                ⚠️ FOURTEEN DAYS IS AN ASSUMPTION, not a rule from anywhere.
- *                Nothing in BusinessLogic.md defines when a referral counts as
- *                stuck. Confirm it before this number is shown to anyone.
- *   monthly      [{ month: "2026-04", referrals, approved }] for the whole
- *                tenant. ⚠️ NO SOURCE IN THE API YET -- see DashboardPage.
- *   regions      [{ code, name, total, approved, stalled, headName,
- *                headUserCode, headAvatarSrc, monthly, groups }]. Three today: NCR,
- *                Luzon, VisMin. `headAvatarSrc` is an absolute URL or null --
- *                the container builds it with `avatarUrl(photo)`.
- *                Each carries its own figures and its own `monthly`, so picking
- *                a region re-scopes the tiles and the chart without a request.
- *                ⚠️ `headName` and `headUserCode` MAY BE NULL. Totals are
- *                grouped by geography, not by person, so a region can sit
- *                without a head and still have history.
- *                `groups` is [{ code, name, total, approved, headName,
- *                headUserCode, headAvatarSrc, monthly }] -- the groups under
- *                that region, each held by an Area Sales Head. One head may
- *                hold several groups, so a name can repeat. The head MAY BE NULL.
- *   (No approvals queue, activity feed or unassigned-account warnings here --
- *   Adrian replaced those cards with the groups table, 2026-09-14.)
- *   loading / error    For the cold load, once the API is wired.
- *   onExport     (preset) => void. Optional until GET /reports/export is wired.
+ *   preset / onPresetChange   The period. Custom is not offered until there is
+ *                a date picker.
+ *   selected / onSelect       ALL_REGIONS or a region code. The top buttons and
+ *                the Groups tabs are both this one value.
+ *   tenant       { total, approved } for all of PhilLife over the period.
+ *   regions      [{ code, name, total, approved, headName, headUserCode,
+ *                headAvatarSrc }] -- every region, over the period, zero
+ *                included. Head fields MAY BE NULL: totals are grouped by
+ *                geography, so a region can sit without a head.
+ *   monthly      [{ month: "2026-09", referrals, approved }] for the tenant or
+ *                the picked region, over the period.
+ *   groups       [{ code, name, regionName, total, approved, headName,
+ *                headUserCode, headAvatarSrc }] -- the groups in view. One Area
+ *                Sales Head may hold several, so a name can repeat.
+ *   summaryLoading / summaryError   Headline, Regions and Overview.
+ *   chartLoading / chartError       The chart.
+ *   groupsLoading / groupsError     The Groups table.
+ *   onExport(preset) / isExporting / exportError
  */
-import { useState } from "react";
-import { CircleCheck, Clock, Download, FileText, Percent } from "lucide-react";
+import { ChartPie, CircleCheck, Download, FileText, Percent } from "lucide-react";
 import { TbChartAreaLine } from "react-icons/tb";
 
 import { ChartAreaGradient } from "@/components/charts/ChartAreaGradient";
@@ -72,11 +60,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { DATE_PRESET, DATE_PRESETS } from "@/constants/presets";
-import { manilaToday } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 
-/** The "every region" choice. Not a region code, so it cannot collide with one. */
-const ALL = "ALL";
+import { ALL_REGIONS as ALL } from "../dashboardData";
+
+/**
+ * The periods on offer. Custom is left out until there is a date picker --
+ * without dates it could only ever show a dash (Adrian, 2026-09-14).
+ */
+const PERIOD_OPTIONS = DATE_PRESETS.filter((option) => option.value !== DATE_PRESET.CUSTOM);
 
 /** Approved as a whole percentage of referrals, or null when there is nothing to divide. */
 function conversionRate(approved, total) {
@@ -92,96 +84,41 @@ function presetLabel(value) {
   return DATE_PRESETS.find((option) => option.value === value)?.label.toLowerCase() ?? "";
 }
 
-/** How many calendar months each rolling preset covers, current month included. */
-const PRESET_MONTHS = {
-  [DATE_PRESET.THIS_MONTH]: 1,
-  [DATE_PRESET.THREE_MONTHS]: 3,
-  [DATE_PRESET.SIX_MONTHS]: 6,
-};
-
-/**
- * Referrals and approvals over the picked period, plus the months that make it
- * up -- for the tenant or for one region.
- *
- * All time reads the API's own totals, never a sum of the months, so the two
- * cannot disagree. The rolling presets add up the monthly series, running to
- * the end of the current Manila month like the backend's presets do. Custom
- * has no dates to read yet, so it answers nulls rather than a guess.
- *
- * "Last 3 months" counts the current month as one of the three -- Adrian's
- * call, 2026-09-14; the backend is asked to confirm it matches (Q1 in
- * BACKEND-REQUESTS.md).
- *
- * ⚠️ STAND-IN. The monthly series has no source (see DashboardPage). When
- * wired, GET /reports/summary with the same preset answers the totals directly
- * and this function goes.
- */
-function figuresFor(preset, { total, approved, monthly = [] }) {
-  if (preset === DATE_PRESET.ALL_TIME) {
-    return { total: total ?? null, approved: approved ?? null, monthly };
-  }
-  if (preset === DATE_PRESET.CUSTOM) {
-    return { total: null, approved: null, monthly: [] };
-  }
-
-  const currentMonth = manilaToday().slice(0, 7);
-  const months = monthly.filter((point) => point.month <= currentMonth);
-  const inPeriod =
-    preset === DATE_PRESET.THIS_YEAR
-      ? months.filter((point) => point.month.slice(0, 4) === currentMonth.slice(0, 4))
-      : months.filter((point) => monthsBetween(point.month, currentMonth) < PRESET_MONTHS[preset]);
-
-  return {
-    total: inPeriod.reduce((sum, point) => sum + point.referrals, 0),
-    approved: inPeriod.reduce((sum, point) => sum + point.approved, 0),
-    monthly: inPeriod,
-  };
-}
-
-/** Whole calendar months from `from` to `to`, both "YYYY-MM". */
-function monthsBetween(from, to) {
-  const [fromYear, fromMonth] = from.split("-").map(Number);
-  const [toYear, toMonth] = to.split("-").map(Number);
-  return (toYear - fromYear) * 12 + (toMonth - fromMonth);
-}
-
 export function DepartmentHeadDashboard({
-  total,
-  approved,
-  stalled,
-  stalledDays,
-  monthly = [],
+  preset,
+  onPresetChange,
+  selected,
+  onSelect,
+  tenant = { total: null, approved: null },
   regions = [],
-  loading = false,
-  error = null,
+  monthly = [],
+  groups = [],
+  summaryLoading = false,
+  summaryError = null,
+  chartLoading = false,
+  chartError = null,
+  groupsLoading = false,
+  groupsError = null,
   onExport,
+  isExporting = false,
+  exportError = null,
 }) {
-  const [selected, setSelected] = useState(ALL);
-  const [preset, setPreset] = useState(DATE_PRESET.ALL_TIME);
-
-  const isCustom = preset === DATE_PRESET.CUSTOM;
   const period = presetLabel(preset);
 
-  // Everything in the chart row follows the period: the tenant's figures, and
-  // each region's. `stalled` is left alone -- it is a count of referrals stuck
-  // right now, and its own label says so.
-  const tenant = figuresFor(preset, { total, approved, monthly });
-  const periodRegions = regions.map((region) => ({ ...region, ...figuresFor(preset, region) }));
-
-  // `find` rather than trusting `selected`: if the regions change under a
-  // selection that no longer exists, this falls back to everything instead of
-  // rendering a blank number.
-  const activeRegion = periodRegions.find((region) => region.code === selected) ?? null;
-
-  const scope = activeRegion
-    ? { ...activeRegion }
-    : { name: "All of PhilLife", stalled, ...tenant };
+  // `find` rather than trusting `selected`: a selection that no longer names a
+  // region renders everything instead of a blank number.
+  const activeRegion = regions.find((region) => region.code === selected) ?? null;
+  const scope = activeRegion ?? { name: "All of PhilLife", ...tenant };
 
   const rate = conversionRate(scope.approved, scope.total);
+  // The region's share of PhilLife's referrals over the same period: the
+  // region's row over the sum of every region's row, both from one call.
   const share =
     activeRegion && tenant.total > 0
       ? Math.round((activeRegion.total / tenant.total) * 100)
-      : null;
+      : activeRegion
+        ? 0
+        : null;
 
   return (
     // DOM order is the phone order: header, region choice, chart, the side
@@ -197,10 +134,16 @@ export function DepartmentHeadDashboard({
             </p>
           </div>
 
-          <ExportControl preset={preset} onPresetChange={setPreset} onExport={onExport} />
+          <ExportControl
+            preset={preset}
+            onPresetChange={onPresetChange}
+            onExport={onExport}
+            isExporting={isExporting}
+            exportError={exportError}
+          />
         </div>
 
-        <RegionScope regions={regions} selected={selected} onSelect={setSelected} />
+        <RegionScope regions={regions} selected={selected} onSelect={onSelect} />
       </div>
 
       <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[3fr_2fr]">
@@ -208,18 +151,14 @@ export function DepartmentHeadDashboard({
             is left, rather than the chart deciding the page's height. */}
         <div className="h-[26rem] md:h-96">
           <ChartAreaGradient
-            data={scope.monthly}
+            data={monthly}
             headline={scope.total}
-            headlineLabel={
-              isCustom
-                ? "Total referrals · pick a date range to see a total"
-                : `Total referrals · ${period}`
-            }
+            headlineLabel={`Total referrals · ${period}`}
             title="Referrals by month"
             description={`${scope.name} · ${period}`}
-            empty={isCustom ? "Pick a date range to see the chart." : "No referrals in this period."}
-            loading={loading}
-            error={error}
+            empty="No referrals in this period."
+            loading={chartLoading}
+            error={chartError}
           />
         </div>
 
@@ -233,21 +172,18 @@ export function DepartmentHeadDashboard({
               share={share}
               rate={rate}
               period={period}
-              isCustom={isCustom}
-              stalledDays={stalledDays}
-              loading={loading}
-              error={error}
+              loading={summaryLoading}
+              error={summaryError}
             />
           ) : (
             <RegionsCard
-              regions={periodRegions}
+              regions={regions}
               total={tenant.total}
               period={period}
-              isCustom={isCustom}
               selected={selected}
-              onSelect={setSelected}
-              loading={loading}
-              error={error}
+              onSelect={onSelect}
+              loading={summaryLoading}
+              error={summaryError}
             />
           )}
         </div>
@@ -255,22 +191,24 @@ export function DepartmentHeadDashboard({
 
       <GroupsCard
         regions={regions}
+        groups={groups}
         selected={selected}
-        onSelect={setSelected}
-        preset={preset}
+        onSelect={onSelect}
         period={period}
-        isCustom={isCustom}
-        loading={loading}
-        error={error}
-      />    </div>
+        loading={groupsLoading}
+        error={groupsError}
+      />
+    </div>
   );
 }
 
 /**
  * One region's figures, in the slot the Regions list leaves when a region is
- * picked. Over the picked period, except Stalled, which is always "right now".
+ * picked, over the picked period. The fourth tile was Stalled until the
+ * backend withdrew R4 -- stalled belongs on the dashboards of the people who
+ * move referrals -- and is now the region's share of PhilLife (Adrian).
  */
-function OverviewCard({ scope, share, rate, period, isCustom, stalledDays, loading, error }) {
+function OverviewCard({ scope, share, rate, period, loading, error }) {
   return (
     <Card className="h-full">
       <CardHeader>
@@ -301,9 +239,6 @@ function OverviewCard({ scope, share, rate, period, isCustom, stalledDays, loadi
               value={formatCount(scope.total)}
               icon={FileText}
               accent="total"
-              hint={
-                isCustom ? "Pick a date range" : share != null ? `${share}% of PhilLife` : null
-              }
             />
             <StatTile
               label={`Approved · ${period}`}
@@ -319,11 +254,10 @@ function OverviewCard({ scope, share, rate, period, isCustom, stalledDays, loadi
               hint="Approved out of referred"
             />
             <StatTile
-              label={`Stalled · ${stalledDays}+ days`}
-              value={formatCount(scope.stalled)}
-              icon={Clock}
-              accent="queue"
-              hint="Right now, whatever the period"
+              label={`Share of PhilLife · ${period}`}
+              value={share != null ? `${share}%` : null}
+              icon={ChartPie}
+              hint="Of all PhilLife referrals"
             />
           </div>
         )}
@@ -333,42 +267,52 @@ function OverviewCard({ scope, share, rate, period, isCustom, stalledDays, loadi
 }
 
 /**
- * The period, and the download of it. The period drives the whole chart row --
- * the headline total, the chart, and the Regions or Overview panel beside it --
- * as well as what Export data downloads. The two lists below do not follow it:
- * a queue and a feed are about now.
+ * The period, and the download.
+ *
+ * The period drives the whole screen: the headline, the chart, the Regions or
+ * Overview panel, and the Groups table. The EXPORT does not follow the region
+ * -- it is always the caller's whole scope (backend Q2) -- so the button says
+ * so, rather than looking like it downloads what the tabs show.
  */
-function ExportControl({ preset, onPresetChange, onExport }) {
+function ExportControl({ preset, onPresetChange, onExport, isExporting, exportError }) {
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-      <label htmlFor="dashboard-export-period" className="sr-only">
-        Period
-      </label>
-      <select
-        id="dashboard-export-period"
-        value={preset}
-        onChange={(event) => onPresetChange(event.target.value)}
-        className="h-8 w-full cursor-pointer rounded-md border border-input bg-background px-2.5 text-xs shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:w-40"
-      >
-        {DATE_PRESETS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+    <div className="flex flex-col gap-1 sm:items-end">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <label htmlFor="dashboard-export-period" className="sr-only">
+          Period
+        </label>
+        <select
+          id="dashboard-export-period"
+          value={preset}
+          onChange={(event) => onPresetChange(event.target.value)}
+          className="h-8 w-full cursor-pointer rounded-md border border-input bg-background px-2.5 text-xs shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:w-40"
+        >
+          {PERIOD_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
 
-      <button
-        type="button"
-        onClick={() => onExport?.(preset)}
-        className="inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground shadow-xs transition-colors hover:bg-primary/90 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
-      >
-        <Download aria-hidden className="size-3.5" />
-        Export data
-      </button>
+        <button
+          type="button"
+          onClick={() => onExport?.(preset)}
+          disabled={isExporting}
+          className="inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground shadow-xs transition-colors hover:bg-primary/90 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50"
+        >
+          <Download aria-hidden className="size-3.5" />
+          {isExporting ? "Exporting…" : "Export all of PhilLife"}
+        </button>
+      </div>
+
+      {exportError ? (
+        <p role="alert" className="text-xs text-destructive">
+          {exportError.message}
+        </p>
+      ) : null}
     </div>
   );
 }
-
 /**
  * Which place the tiles and the chart describe. Built from `regions`, so a
  * region added in the data needs nothing added here.
@@ -423,7 +367,7 @@ const REGION_HOVERS = [
  * Each row is also the way into that region: pressing it picks it above, and
  * the picked row stays highlighted so the two controls cannot disagree.
  */
-function RegionsCard({ regions, total, period, isCustom, selected, onSelect, loading, error }) {
+function RegionsCard({ regions, total, period, selected, onSelect, loading, error }) {
   // Tint follows the region's place in `regions`; order follows conversion.
   // Copy before sorting: `sort` mutates.
   const ranked = regions
@@ -461,11 +405,7 @@ function RegionsCard({ regions, total, period, isCustom, selected, onSelect, loa
           <DataPlaceholder
             loading={loading}
             error={error}
-            empty={
-              isCustom
-                ? "Pick a date range to see the regions."
-                : "No referrals in this period. Regional figures appear once branches refer."
-            }
+            empty="No referrals in this period. Regional figures appear once branches refer."
             loadingLabel="Loading regions..."
           />
         ) : (
@@ -561,38 +501,24 @@ function RegionsCard({ regions, total, period, isCustom, selected, onSelect, loa
  * One component, two renderings (pattern §6): a real table from md up, a card
  * list below it -- never a table scrolling sideways on a phone.
  */
-function GroupsCard({ regions, selected, onSelect, preset, period, isCustom, loading, error }) {
+function GroupsCard({ regions, groups, selected, onSelect, period, loading, error }) {
   const showAll = !regions.some((region) => region.code === selected);
   const scopeName = showAll ? "All of PhilLife" : regions.find((r) => r.code === selected).name;
 
-  const rows = regions
-    .filter((region) => showAll || region.code === selected)
-    .flatMap((region) =>
-      (region.groups ?? []).map((group) => {
-        const figures = figuresFor(preset, group);
-        return {
-          ...group,
-          ...figures,
-          regionName: region.name,
-          rate: conversionRate(figures.approved, figures.total),
-        };
-      }),
-    )
+  // `groups` arrives already narrowed to the region in view and to the period.
+  const rows = groups
+    .map((group) => ({ ...group, rate: conversionRate(group.approved, group.total) }))
     .sort((a, b) => (b.rate ?? -1) - (a.rate ?? -1));
 
   const emptyState = (
     <DataPlaceholder
       loading={loading}
       error={error}
-      empty={
-        isCustom
-          ? "Pick a date range to see the groups."
-          : "No groups under this region yet."
-      }
+      empty="No groups with referrals or an Area Sales Head in this region yet."
       loadingLabel="Loading groups..."
     />
   );
-  const isEmpty = loading || error || rows.length === 0 || isCustom;
+  const isEmpty = loading || error || rows.length === 0;
 
   return (
     <Card>
