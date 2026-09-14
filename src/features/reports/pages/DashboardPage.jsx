@@ -75,8 +75,6 @@ const PLACEHOLDER = {
   /** Referrals with no status change in `stalledDays`. */
   stalled: 49,
   stalledDays: 14,
-  /** Account Officers approved but holding no branches. One tier below the DH. */
-  unassignedOfficers: 3,
   // The three regions below, month by month, added together.
   monthly: [
     { month: '2026-04', referrals: 110, approved: 33 },
