@@ -2,7 +2,7 @@
  * The Department Head's dashboard, built on context/FRONTEND_DESIGN_PATTERN.md.
  * Header, the region choice, then the chart with a side panel beside it --
  * Regions while every region is showing, that region's Overview once one is
- * picked -- and below them the work waiting on the DH and the activity feed.
+ * picked -- and below them a table of the groups under the regions.
  *
  * Presentational. `pages/DashboardPage.jsx` supplies every prop. Right now it
  * supplies HARDCODED numbers -- when the API is wired, only that file changes.
@@ -29,7 +29,7 @@
  *   monthly      [{ month: "2026-04", referrals, approved }] for the whole
  *                tenant. ⚠️ NO SOURCE IN THE API YET -- see DashboardPage.
  *   regions      [{ code, name, total, approved, stalled, headName,
- *                headUserCode, headAvatarSrc, monthly }]. Three today: NCR,
+ *                headUserCode, headAvatarSrc, monthly, groups }]. Three today: NCR,
  *                Luzon, VisMin. `headAvatarSrc` is an absolute URL or null --
  *                the container builds it with `avatarUrl(photo)`.
  *                Each carries its own figures and its own `monthly`, so picking
@@ -37,29 +37,18 @@
  *                ⚠️ `headName` and `headUserCode` MAY BE NULL. Totals are
  *                grouped by geography, not by person, so a region can sit
  *                without a head and still have history.
- *   pendingApprovals   Number. Regional Sales Heads waiting on this DH.
- *   unassignedHeads    Number. Approved RSHs holding no region yet. Such an
- *                      account sees an empty dashboard with nothing explaining
- *                      why, and the DH is the only role who can fix it.
- *   (No unassigned Account Officers here, by Adrian's call: that is the Area
- *   Sales Head's to see and to fix, on their own dashboard.)
- *   notifications  [{ id, text, at }]. `at` is a UTC timestamp.
+ *                `groups` is [{ code, name, total, approved, headName,
+ *                headUserCode, headAvatarSrc, monthly }] -- the groups under
+ *                that region, each held by an Area Sales Head. One head may
+ *                hold several groups, so a name can repeat. The head MAY BE NULL.
+ *   (No approvals queue, activity feed or unassigned-account warnings here --
+ *   Adrian replaced those cards with the groups table, 2026-09-14.)
  *   loading / error    For the cold load, once the API is wired.
  *   onExport     (preset) => void. Optional until GET /reports/export is wired.
  */
 import { useState } from "react";
-import {
-  ArrowRight,
-  CircleCheck,
-  Clock,
-  Download,
-  FileText,
-  Percent,
-  UserCheck,
-  UserPlus,
-} from "lucide-react";
+import { CircleCheck, Clock, Download, FileText, Percent } from "lucide-react";
 import { TbChartAreaLine } from "react-icons/tb";
-import { Link } from "react-router";
 
 import { ChartAreaGradient } from "@/components/charts/ChartAreaGradient";
 import { DataPlaceholder } from "@/components/DataPlaceholder";
@@ -73,10 +62,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { DATE_PRESET, DATE_PRESETS } from "@/constants/presets";
-import { formatRelative, manilaToday } from "@/lib/datetime";
+import { manilaToday } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
-import { paths } from "@/routes/paths";
 
 /** The "every region" choice. Not a region code, so it cannot collide with one. */
 const ALL = "ALL";
@@ -111,10 +107,13 @@ const PRESET_MONTHS = {
  * the end of the current Manila month like the backend's presets do. Custom
  * has no dates to read yet, so it answers nulls rather than a guess.
  *
- * ⚠️ STAND-IN. The monthly series has no source (see DashboardPage), and
- * whether "Last 3 months" counts the current month is not written down in
- * presets.js -- this assumes it does. When wired, GET /reports/summary with the
- * same preset answers the totals directly and this function goes.
+ * "Last 3 months" counts the current month as one of the three -- Adrian's
+ * call, 2026-09-14; the backend is asked to confirm it matches (Q1 in
+ * BACKEND-REQUESTS.md).
+ *
+ * ⚠️ STAND-IN. The monthly series has no source (see DashboardPage). When
+ * wired, GET /reports/summary with the same preset answers the totals directly
+ * and this function goes.
  */
 function figuresFor(preset, { total, approved, monthly = [] }) {
   if (preset === DATE_PRESET.ALL_TIME) {
@@ -152,9 +151,6 @@ export function DepartmentHeadDashboard({
   stalledDays,
   monthly = [],
   regions = [],
-  pendingApprovals = 0,
-  unassignedHeads = 0,
-  notifications = [],
   loading = false,
   error = null,
   onExport,
@@ -188,7 +184,7 @@ export function DepartmentHeadDashboard({
 
   return (
     // DOM order is the phone order: header, region choice, chart, the side
-    // panel, then the two lists. From lg the chart and the side panel share a
+    // panel, then the groups table. From lg the chart and the side panel share a
     // row, three fifths to two fifths.
     <div className="flex w-full flex-col gap-5">
       <div className="flex flex-col gap-3">
@@ -256,20 +252,16 @@ export function DepartmentHeadDashboard({
         </div>
       </div>
 
-      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-2">
-        <AttentionCard
-          pendingApprovals={pendingApprovals}
-          unassignedHeads={unassignedHeads}
-          stalled={stalled}
-          stalledDays={stalledDays}
-          regions={regions}
-          loading={loading}
-          error={error}
-        />
-
-        <ActivityCard notifications={notifications} loading={loading} error={error} />
-      </div>
-    </div>
+      <GroupsCard
+        regions={regions}
+        selected={selected}
+        onSelect={setSelected}
+        preset={preset}
+        period={period}
+        isCustom={isCustom}
+        loading={loading}
+        error={error}
+      />    </div>
   );
 }
 
@@ -410,101 +402,6 @@ function RegionScope({ regions, selected, onSelect }) {
 }
 
 /**
- * The things only a Department Head is placed to fix. Tenant-wide whichever
- * region is picked -- a queue does not belong to a region. Each row hides at
- * zero; an empty queue is not news.
- */
-function AttentionCard({
-  pendingApprovals,
-  unassignedHeads,
-  stalled,
-  stalledDays,
-  regions,
-  loading,
-  error,
-}) {
-  // Point at the region carrying most of the stall, rather than a hardcoded
-  // name that goes stale the day the numbers move.
-  const worstStalled = regions.reduce(
-    (worst, region) => ((region.stalled ?? 0) > (worst?.stalled ?? 0) ? region : worst),
-    null,
-  );
-
-  const items = [
-    unassignedHeads > 0 && {
-      key: "heads",
-      Icon: UserPlus,
-      to: paths.people,
-      label:
-        unassignedHeads === 1
-          ? "1 Regional Sales Head has no region yet"
-          : `${unassignedHeads} Regional Sales Heads have no region yet`,
-      note: "Until they do, their screens are empty and nothing says why.",
-    },
-    pendingApprovals > 0 && {
-      key: "approvals",
-      Icon: UserCheck,
-      to: paths.approvals,
-      label:
-        pendingApprovals === 1
-          ? "1 account is waiting for your approval"
-          : `${pendingApprovals} accounts are waiting for your approval`,
-    },
-    stalled > 0 && {
-      key: "stalled",
-      Icon: Clock,
-      to: paths.referrals,
-      label: `${stalled} referrals have not moved in ${stalledDays} days`,
-      note: worstStalled
-        ? `Most are in ${worstStalled.name} (${worstStalled.stalled}). Worth asking its Regional Sales Head why.`
-        : null,
-    },
-  ].filter(Boolean);
-
-  return (
-    <Card className="h-full">
-      <CardHeader>
-        <CardTitle>Needs your attention</CardTitle>
-        <CardDescription>Across PhilLife, whichever region is picked</CardDescription>
-      </CardHeader>
-      <CardContent className="flex min-h-0 flex-1 flex-col">
-        {loading || error || items.length === 0 ? (
-          <DataPlaceholder
-            loading={loading}
-            error={error}
-            empty="Nothing is waiting on you right now."
-            loadingLabel="Loading your queue..."
-          />
-        ) : (
-          <ul className="-mx-6 divide-y border-y">
-            {items.map(({ key, Icon, to, label, note }) => (
-              <li key={key}>
-                <Link
-                  to={to}
-                  className="group flex items-start gap-3 px-6 py-3 transition-colors hover:bg-muted/50"
-                >
-                  <Icon aria-hidden className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                  <span className="flex flex-1 flex-col gap-0.5">
-                    <span className="text-sm font-medium">{label}</span>
-                    {note ? (
-                      <span className="text-xs text-muted-foreground">{note}</span>
-                    ) : null}
-                  </span>
-                  <ArrowRight
-                    aria-hidden
-                    className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
-                  />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-/**
  * One hover tint per region -- the only per-region colour on the card, and
  * Adrian's pick. Assigned by the region's position in `regions`, NOT by rank,
  * so a row keeps its tint when the period reorders the list. Faint, with a
@@ -640,38 +537,172 @@ function RegionsCard({ regions, total, period, isCustom, selected, onSelect, loa
   );
 }
 
-function ActivityCard({ notifications, loading, error }) {
+/**
+ * The groups under the regions, one row each: the group, its Area Sales Head,
+ * how much of its referrals were approved, and how many it had.
+ *
+ * The tabs above the table ARE the region choice at the top of the dashboard
+ * -- the same state, not a copy -- so picking NCR in either place narrows the
+ * chart, the side panel and this table together (Adrian's call). The period
+ * dropdown narrows it too.
+ *
+ * Ranked by approval, like the Regions card, so a group that is not closing
+ * does not hide under a big one. A group with no referrals in the period sinks
+ * to the bottom rather than reading as 0%.
+ *
+ * One component, two renderings (pattern §6): a real table from md up, a card
+ * list below it -- never a table scrolling sideways on a phone.
+ */
+function GroupsCard({ regions, selected, onSelect, preset, period, isCustom, loading, error }) {
+  const showAll = !regions.some((region) => region.code === selected);
+  const scopeName = showAll ? "All of PhilLife" : regions.find((r) => r.code === selected).name;
+
+  const rows = regions
+    .filter((region) => showAll || region.code === selected)
+    .flatMap((region) =>
+      (region.groups ?? []).map((group) => {
+        const figures = figuresFor(preset, group);
+        return {
+          ...group,
+          ...figures,
+          regionName: region.name,
+          rate: conversionRate(figures.approved, figures.total),
+        };
+      }),
+    )
+    .sort((a, b) => (b.rate ?? -1) - (a.rate ?? -1));
+
+  const emptyState = (
+    <DataPlaceholder
+      loading={loading}
+      error={error}
+      empty={
+        isCustom
+          ? "Pick a date range to see the groups."
+          : "No groups under this region yet."
+      }
+      loadingLabel="Loading groups..."
+    />
+  );
+  const isEmpty = loading || error || rows.length === 0 || isCustom;
+
   return (
-    <Card className="h-full">
-      <CardHeader>
-        <CardTitle>Latest activity</CardTitle>
-        <CardDescription>The most recent changes across PhilLife</CardDescription>
+    <Card>
+      <CardHeader className="gap-3">
+        <div className="space-y-1.5">
+          <CardTitle>Groups</CardTitle>
+          <CardDescription>
+            {scopeName} · ranked by approval · {period}
+          </CardDescription>
+        </div>
+        <RegionScope regions={regions} selected={showAll ? ALL : selected} onSelect={onSelect} />
       </CardHeader>
-      <CardContent className="flex min-h-0 flex-1 flex-col">
-        {loading || error || notifications.length === 0 ? (
-          <DataPlaceholder
-            loading={loading}
-            error={error}
-            empty="No activity yet."
-            loadingLabel="Loading activity..."
-          />
-        ) : (
-          <ul className="-mx-6 divide-y border-y">
-            {notifications.map((item) => (
-              <li
-                key={item.id}
-                className="flex items-baseline justify-between gap-4 px-6 py-3 text-sm"
-              >
-                <span>{item.text}</span>
-                {/* Relative: on a feed the gap is the useful part. */}
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {formatRelative(item.at)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
+
+      <CardContent>
+        {/* Desktop: the table. Edge to edge inside the card, so the first and
+            last columns carry the card's own padding. */}
+        <div className="-mx-6 hidden md:block">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="pl-6 text-xs text-muted-foreground">Group</TableHead>
+                <TableHead className="text-xs text-muted-foreground">Area Sales Head</TableHead>
+                <TableHead className="w-[30%] text-xs text-muted-foreground">Approved</TableHead>
+                <TableHead className="pr-6 text-right text-xs text-muted-foreground">
+                  Referrals
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isEmpty ? (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={4} className="py-6 text-center">
+                    {emptyState}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                rows.map((row) => (
+                  <TableRow key={row.code}>
+                    <TableCell className="pl-6">
+                      <div className="font-medium">{row.name}</div>
+                      {showAll ? (
+                        <div className="text-xs text-muted-foreground">{row.regionName}</div>
+                      ) : null}
+                    </TableCell>
+                    <TableCell>
+                      <HeadChip row={row} />
+                    </TableCell>
+                    <TableCell>
+                      <ApprovalBar rate={row.rate} />
+                    </TableCell>
+                    <TableCell className="pr-6 text-right font-medium tabular-nums">
+                      {formatCount(row.total)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Phone: the same rows as a list. Four facts each -- group, head,
+            approval, referrals. */}
+        <div className="-mx-6 divide-y border-y md:hidden">
+          {isEmpty ? (
+            <div className="px-6 py-6 text-center">{emptyState}</div>
+          ) : (
+            rows.map((row) => (
+              <div key={row.code} className="space-y-2 px-6 py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">{row.name}</div>
+                    {showAll ? (
+                      <div className="text-xs text-muted-foreground">{row.regionName}</div>
+                    ) : null}
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div className="font-medium tabular-nums">{formatCount(row.total)}</div>
+                    <div className="text-xs text-muted-foreground">referrals</div>
+                  </div>
+                </div>
+                <HeadChip row={row} />
+                <ApprovalBar rate={row.rate} />
+              </div>
+            ))
+          )}
+        </div>
       </CardContent>
     </Card>
+  );
+}
+
+/** An Area Sales Head: picture, name, user code. A group can have none. */
+function HeadChip({ row }) {
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <UserAvatar src={row.headAvatarSrc} name={row.headName} size="md" />
+      <div className="min-w-0">
+        <div className={cn("truncate text-sm", row.headName ? "font-medium" : "text-muted-foreground")}>
+          {row.headName ?? "No Area Sales Head"}
+        </div>
+        {row.headUserCode ? (
+          <div className="truncate text-xs text-muted-foreground">{row.headUserCode}</div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/** Approved as a share of the group's referrals: a bar, and the figure beside it. */
+function ApprovalBar({ rate }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div aria-hidden className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+        <div className="h-full rounded-full bg-primary" style={{ width: `${rate ?? 0}%` }} />
+      </div>
+      <span className="w-9 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+        {rate != null ? `${rate}%` : "—"}
+      </span>
+    </div>
   );
 }

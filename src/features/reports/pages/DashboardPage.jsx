@@ -46,6 +46,13 @@ export function DashboardPage() {
  *   region stalled     12 +  31 +   6 =  49
  *   each region's `monthly` sums to that region's total and approved
  *   the tenant `monthly` is the three regions' months added together
+ *   each region's `groups` add up to that region -- totals, approved, and
+ *   every month
+ *
+ * Groups are the tier under a region, each held by an Area Sales Head. One
+ * head (Maria Santos) holds two NCR groups, which is ordinary -- an Area Sales
+ * Head may hold several. SOUTH LUZON has no head, on purpose, to show the gap.
+ * Group codes 1-3 and their names are the real seeded ones; 4-8 are invented.
  *
  * The series covers April to September 2026 and nothing before it, which is
  * what lets it sum to an all-time total: it stands for a system that went live
@@ -84,11 +91,6 @@ const PLACEHOLDER = {
     { month: '2026-08', referrals: 160, approved: 51 },
     { month: '2026-09', referrals: 165, approved: 54 },
   ],
-  notifications: [
-    { id: 'n1', text: 'Ana Reyes approved 2 Area Sales Heads', at: '2026-09-11T01:40:00Z' },
-    { id: 'n2', text: 'VisMin passed 240 referrals', at: '2026-09-10T22:05:00Z' },
-    { id: 'n3', text: 'A Regional Sales Head registration is waiting for you', at: '2026-09-10T07:30:00Z' },
-  ],
   regions: [
     {
       code: 'NCR',
@@ -101,6 +103,59 @@ const PLACEHOLDER = {
       // No real uploads to point at, so every head shows initials for now.
       // Wired, this is avatarUrl(photo) from lib/apiClient.js.
       headAvatarSrc: null,
+      groups: [
+        {
+          code: 1,
+          name: 'CENTRAL NCR',
+          total: 127,
+          approved: 46,
+          headName: 'Maria Santos',
+          headUserCode: 'PHL-ASH-00001',
+          headAvatarSrc: null,
+          monthly: [
+            { month: '2026-04', referrals: 16, approved: 6 },
+            { month: '2026-05', referrals: 19, approved: 7 },
+            { month: '2026-06', referrals: 21, approved: 7 },
+            { month: '2026-07', referrals: 23, approved: 8 },
+            { month: '2026-08', referrals: 24, approved: 9 },
+            { month: '2026-09', referrals: 24, approved: 9 },
+          ],
+        },
+        {
+          code: 2,
+          name: 'NORTH NCR',
+          total: 107,
+          approved: 29,
+          headName: 'Maria Santos',
+          headUserCode: 'PHL-ASH-00001',
+          headAvatarSrc: null,
+          monthly: [
+            { month: '2026-04', referrals: 14, approved: 3 },
+            { month: '2026-05', referrals: 15, approved: 4 },
+            { month: '2026-06', referrals: 17, approved: 5 },
+            { month: '2026-07', referrals: 19, approved: 5 },
+            { month: '2026-08', referrals: 21, approved: 6 },
+            { month: '2026-09', referrals: 21, approved: 6 },
+          ],
+        },
+        {
+          code: 3,
+          name: 'SOUTH NCR',
+          total: 76,
+          approved: 21,
+          headName: 'Paolo Reyes',
+          headUserCode: 'PHL-ASH-00002',
+          headAvatarSrc: null,
+          monthly: [
+            { month: '2026-04', referrals: 10, approved: 3 },
+            { month: '2026-05', referrals: 11, approved: 3 },
+            { month: '2026-06', referrals: 12, approved: 3 },
+            { month: '2026-07', referrals: 13, approved: 4 },
+            { month: '2026-08', referrals: 15, approved: 4 },
+            { month: '2026-09', referrals: 15, approved: 4 },
+          ],
+        },
+      ],
       monthly: [
         { month: '2026-04', referrals: 40, approved: 12 },
         { month: '2026-05', referrals: 45, approved: 14 },
@@ -119,6 +174,59 @@ const PLACEHOLDER = {
       headName: 'Ana Reyes',
       headUserCode: 'PHL-RSH-00002',
       headAvatarSrc: null,
+      groups: [
+        {
+          code: 4,
+          name: 'NORTH LUZON',
+          total: 91,
+          approved: 30,
+          headName: 'Liza Garcia',
+          headUserCode: 'PHL-ASH-00003',
+          headAvatarSrc: null,
+          monthly: [
+            { month: '2026-04', referrals: 12, approved: 4 },
+            { month: '2026-05', referrals: 14, approved: 4 },
+            { month: '2026-06', referrals: 15, approved: 5 },
+            { month: '2026-07', referrals: 16, approved: 5 },
+            { month: '2026-08', referrals: 17, approved: 6 },
+            { month: '2026-09', referrals: 17, approved: 6 },
+          ],
+        },
+        {
+          code: 5,
+          name: 'CENTRAL LUZON',
+          total: 118,
+          approved: 31,
+          headName: 'Ramon Dela Cruz',
+          headUserCode: 'PHL-ASH-00004',
+          headAvatarSrc: null,
+          monthly: [
+            { month: '2026-04', referrals: 16, approved: 4 },
+            { month: '2026-05', referrals: 18, approved: 5 },
+            { month: '2026-06', referrals: 19, approved: 4 },
+            { month: '2026-07', referrals: 21, approved: 6 },
+            { month: '2026-08', referrals: 22, approved: 6 },
+            { month: '2026-09', referrals: 22, approved: 6 },
+          ],
+        },
+        {
+          code: 6,
+          name: 'SOUTH LUZON',
+          total: 86,
+          approved: 17,
+          headName: null,
+          headUserCode: null,
+          headAvatarSrc: null,
+          monthly: [
+            { month: '2026-04', referrals: 12, approved: 2 },
+            { month: '2026-05', referrals: 13, approved: 2 },
+            { month: '2026-06', referrals: 14, approved: 3 },
+            { month: '2026-07', referrals: 15, approved: 3 },
+            { month: '2026-08', referrals: 16, approved: 3 },
+            { month: '2026-09', referrals: 16, approved: 4 },
+          ],
+        },
+      ],
       monthly: [
         { month: '2026-04', referrals: 40, approved: 10 },
         { month: '2026-05', referrals: 45, approved: 11 },
@@ -137,6 +245,42 @@ const PLACEHOLDER = {
       headName: null,
       headUserCode: null,
       headAvatarSrc: null,
+      groups: [
+        {
+          code: 7,
+          name: 'VISAYAS',
+          total: 136,
+          approved: 46,
+          headName: 'Grace Villanueva',
+          headUserCode: 'PHL-ASH-00005',
+          headAvatarSrc: null,
+          monthly: [
+            { month: '2026-04', referrals: 17, approved: 6 },
+            { month: '2026-05', referrals: 20, approved: 6 },
+            { month: '2026-06', referrals: 22, approved: 7 },
+            { month: '2026-07', referrals: 24, approved: 8 },
+            { month: '2026-08', referrals: 25, approved: 9 },
+            { month: '2026-09', referrals: 28, approved: 10 },
+          ],
+        },
+        {
+          code: 8,
+          name: 'MINDANAO',
+          total: 106,
+          approved: 42,
+          headName: 'Jose Bautista',
+          headUserCode: 'PHL-ASH-00006',
+          headAvatarSrc: null,
+          monthly: [
+            { month: '2026-04', referrals: 13, approved: 5 },
+            { month: '2026-05', referrals: 15, approved: 6 },
+            { month: '2026-06', referrals: 18, approved: 7 },
+            { month: '2026-07', referrals: 18, approved: 7 },
+            { month: '2026-08', referrals: 20, approved: 8 },
+            { month: '2026-09', referrals: 22, approved: 9 },
+          ],
+        },
+      ],
       monthly: [
         { month: '2026-04', referrals: 30, approved: 11 },
         { month: '2026-05', referrals: 35, approved: 12 },
@@ -147,6 +291,5 @@ const PLACEHOLDER = {
       ],
     },
   ],
-  pendingApprovals: 1,
-  unassignedHeads: 2,
+
 }
