@@ -15,6 +15,9 @@
  *   headline       Number, or null. The big figure at the top of the card.
  *                  Null renders an em dash rather than a zero.
  *   headlineLabel  The line under it. MUST NAME THE PERIOD the figure covers.
+ *   headlineApproved  Number, or null. How many of `headline` were approved.
+ *                  While "Compare with approved" is on, its share of the
+ *                  headline shows beside the number, in the approved green.
  *   title          What the chart is. Shown in the footer, under the chart.
  *   description    One sentence under the title: what is plotted, and where.
  *   empty          What to say when data is empty. Name the reason.
@@ -75,6 +78,7 @@ export function ChartAreaGradient({
   data = [],
   headline = null,
   headlineLabel,
+  headlineApproved = null,
   title = "Referrals by month",
   description,
   empty = "No referrals recorded yet.",
@@ -124,6 +128,14 @@ export function ChartAreaGradient({
           {/* Decorative -- the label below already names the figure. */}
           <HiUserGroup aria-hidden className="size-7 text-muted-foreground" />
           {loading || error || headline == null ? "—" : headline.toLocaleString("en-PH")}
+          {/* The approved share, only while comparing (Adrian): the same
+              question the green line answers, as one figure. Green #00bb7c,
+              the approved colour; nothing shown when there is nothing to divide. */}
+          {showApproved && !loading && !error && headline > 0 && headlineApproved != null ? (
+            <span className="rounded-md bg-[#00bb7c]/10 px-1.5 py-0.5 text-xs font-medium text-[#00bb7c] tabular-nums">
+              {Math.round((headlineApproved / headline) * 100)}% approved
+            </span>
+          ) : null}
         </CardTitle>
         {headlineLabel ? <CardDescription>{headlineLabel}</CardDescription> : null}
 

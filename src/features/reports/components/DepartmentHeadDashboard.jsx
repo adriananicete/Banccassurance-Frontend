@@ -106,6 +106,7 @@ export function DepartmentHeadDashboard({
           <ChartAreaGradient
             data={monthly}
             headline={scope.total}
+            headlineApproved={scope.approved}
             headlineLabel={`Total referrals · ${period}`}
             title="Referrals by month"
             description={`${scope.name} · ${period}`}
