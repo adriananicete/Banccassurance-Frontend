@@ -83,25 +83,23 @@ export function ChartAreaGradient({
   const fillApproved = `fillApproved${uid}`;
 
   const hasData = data.length > 0;
-  // An area needs two points to have a shape. A single month -- "This month"
-  // -- would otherwise draw nothing at all, so give it dots.
-  const showDots = data.length === 1;
-
   /*
-    Remount the chart whenever the series changes, rather than letting Recharts
-    animate from the old series to the new one.
+    An area needs two points to have a width. "This month" is one month, and
+    one point draws no line and no fill at all -- the chart just goes blank.
 
-    Its update animation morphs the previous points into the next, tracked in
-    refs inside each <Area>. When the number of points changes -- six months to
-    one when "This month" is picked, or a region with a different span -- that
-    morph could leave the line and fill not drawn at all. The entrance
-    animation on a fresh mount has no previous points to match, and it is the
-    one that always drew correctly on first load.
+    So a single month is plotted twice, once at each edge, which draws it as a
+    flat band across the card: the honest shape of one value. Points are
+    addressed by `slot` rather than by month so the two copies stay distinct,
+    and only the first slot gets a tick, so the month is labelled once.
   */
-  const seriesKey = data
-    .map((point) => `${point.month}:${point.referrals}:${point.approved}`)
-    .join("|");
-
+  const plotted =
+    data.length === 1
+      ? [
+          { ...data[0], slot: "0" },
+          { ...data[0], slot: "1" },
+        ]
+      : data.map((point, index) => ({ ...point, slot: String(index) }));
+  const monthAt = (slot) => plotted[Number(slot)]?.month;
   return (
     <Card className={cn("h-full", className)}>
       <CardHeader>
@@ -129,22 +127,23 @@ export function ChartAreaGradient({
           // aspect-auto beats ChartContainer's default aspect-video, so the
           // chart follows the card's height rather than its own ratio.
           <ChartContainer config={chartConfig} className="aspect-auto h-full w-full">
-            <AreaChart key={seriesKey} accessibilityLayer data={data} margin={{ left: 12, right: 12, top: 8 }}>
+            <AreaChart accessibilityLayer data={plotted} margin={{ left: 12, right: 12, top: 8 }}>
               <CartesianGrid vertical={false} strokeDasharray="3 3" />
               <XAxis
-                dataKey="month"
+                dataKey="slot"
+                ticks={data.length === 1 ? ["0"] : undefined}
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
                 tick={{ fontSize: 11 }}
-                tickFormatter={(value) => formatMonthShort(value)}
+                tickFormatter={(slot) => formatMonthShort(monthAt(slot))}
               />
               <ChartTooltip
                 cursor={false}
                 content={
                   <ChartTooltipContent
                     indicator="dot"
-                    labelFormatter={(value) => formatMonthYear(value)}
+                    labelFormatter={(_, payload) => formatMonthYear(payload?.[0]?.payload?.month)}
                   />
                 }
               />
@@ -164,7 +163,6 @@ export function ChartAreaGradient({
                 fill={`url(#${fillReferrals})`}
                 fillOpacity={0.4}
                 stroke="var(--color-referrals)"
-                dot={showDots}
               />
               <Area
                 dataKey="approved"
@@ -172,7 +170,6 @@ export function ChartAreaGradient({
                 fill={`url(#${fillApproved})`}
                 fillOpacity={0.4}
                 stroke="var(--color-approved)"
-                dot={showDots}
               />
             </AreaChart>
           </ChartContainer>
