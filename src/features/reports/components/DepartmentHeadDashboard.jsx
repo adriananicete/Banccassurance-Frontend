@@ -69,6 +69,7 @@ import { StatTile } from "@/components/StatTile";
 import { UserAvatar } from "@/components/UserAvatar";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -288,6 +289,18 @@ function OverviewCard({ scope, share, rate, period, isCustom, stalledDays, loadi
         <CardDescription>
           {scope.name} · {period}
         </CardDescription>
+        {/* Who runs this region, beside what it did. CardAction puts it in the
+            header's right column, level with the title. A region without a
+            head says so rather than leaving the corner empty. */}
+        <CardAction className="flex min-w-0 items-center gap-2">
+          <UserAvatar src={scope.headAvatarSrc} name={scope.headName} size="md" />
+          <div className="min-w-0">
+            <div className="truncate text-xs font-medium">
+              {scope.headName ?? "No one assigned"}
+            </div>
+            <div className="truncate text-xs text-muted-foreground">Regional Sales Head</div>
+          </div>
+        </CardAction>
       </CardHeader>
       <CardContent className="min-h-0 flex-1 overflow-auto">
         {loading || error ? (
