@@ -54,6 +54,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import { Toggle } from "@/components/ui/toggle";
 import { formatMonthShort, formatMonthYear } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 
@@ -145,19 +146,14 @@ export function ChartAreaGradient({
             colour off. */}
         <CardAction className="flex items-center gap-2">
           {hasData && !loading && !error ? (
-            <button
-              type="button"
-              aria-pressed={showApproved}
-              onClick={() => setShowApproved((shown) => !shown)}
-              className={cn(
-                "inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium shadow-xs transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
-                showApproved
-                  ? "border-input bg-muted text-foreground"
-                  : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
+            <Toggle
+              variant="outline"
+              pressed={showApproved}
+              onPressedChange={setShowApproved}
+              className="text-xs"
             >
               Compare with approved
-            </button>
+            </Toggle>
           ) : null}
         </CardAction>
       </CardHeader>

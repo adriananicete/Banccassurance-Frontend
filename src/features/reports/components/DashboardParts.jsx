@@ -13,6 +13,7 @@ import { useState } from "react";
 import { TbChartAreaLine } from "react-icons/tb";
 
 import { DataPlaceholder } from "@/components/DataPlaceholder";
+import { Button } from "@/components/ui/button";
 import { StatTile } from "@/components/StatTile";
 import { UserAvatar } from "@/components/UserAvatar";
 import {
@@ -33,6 +34,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -41,6 +43,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 import { ALL_REGIONS as ALL } from "../dashboardData";
@@ -56,17 +59,44 @@ import {
 /**
  * The page title and its one sentence.
  */
-export function DashboardTitle({ subtitle }) {
+export function DashboardTitle({ title = "Dashboard", subtitle }) {
   return (
     <div>
-      <h1 className="text-xl font-semibold md:text-2xl">Dashboard</h1>
+      <h1 className="text-xl font-semibold md:text-2xl">{title}</h1>
       <p className="text-sm text-muted-foreground">{subtitle}</p>
     </div>
   );
 }
 
 /**
- * The period, and the download.
+ * The period dropdown -- shadcn's Select. `items` gives the trigger the
+ * option's label rather than its raw value.
+ */
+export function PeriodSelect({ preset, onPresetChange, className }) {
+  return (
+    <Select
+      items={PERIOD_OPTIONS}
+      value={preset}
+      onValueChange={(value) => {
+        if (value) onPresetChange(value);
+      }}
+    >
+      <SelectTrigger aria-label="Period" className={cn("w-full text-xs sm:w-40", className)}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {PERIOD_OPTIONS.map((option) => (
+          <SelectItem key={option.value} value={option.value} className="text-xs">
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+/**
+ * The period, and the download -- shadcn's Select and Button.
  *
  * The period drives the whole screen. The EXPORT does not follow the region --
  * it is always the caller's whole scope (backend Q2) -- so the button names
@@ -77,31 +107,11 @@ export function ExportControl({ preset, onPresetChange, onExport, isExporting, e
   return (
     <div className="flex flex-col gap-1 sm:items-end">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <label htmlFor="dashboard-export-period" className="sr-only">
-          Period
-        </label>
-        <select
-          id="dashboard-export-period"
-          value={preset}
-          onChange={(event) => onPresetChange(event.target.value)}
-          className="h-8 w-full cursor-pointer rounded-md border border-input bg-background px-2.5 text-xs shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:w-40"
-        >
-          {PERIOD_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-
-        <button
-          type="button"
-          onClick={() => onExport?.(preset)}
-          disabled={isExporting}
-          className="inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground shadow-xs transition-colors hover:bg-primary/90 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50"
-        >
-          <Download aria-hidden className="size-3.5" />
+        <PeriodSelect preset={preset} onPresetChange={onPresetChange} />
+        <Button onClick={() => onExport?.(preset)} disabled={isExporting} className="text-xs">
+          <Download data-icon="inline-start" />
           {isExporting ? "Exporting…" : `Export all of ${scopeName}`}
-        </button>
+        </Button>
       </div>
 
       {exportError ? (
@@ -114,34 +124,25 @@ export function ExportControl({ preset, onPresetChange, onExport, isExporting, e
 }
 
 /**
- * The region buttons: All regions, then every region. Built from `regions`, so
- * a region added in the data needs nothing added here.
+ * The region buttons -- shadcn's Tabs, used as a control rather than to switch
+ * panels: All regions, then every region. Built from `regions`, so a region
+ * added in the data needs nothing added here.
  */
 export function RegionScope({ regions, selected, onSelect }) {
   const options = [{ code: ALL, name: "All regions" }, ...regions];
 
   return (
-    <div role="group" aria-label="Region" className="flex w-full rounded-lg bg-muted p-1 sm:w-fit">
-      {options.map((option) => (
-        <button
-          key={option.code}
-          type="button"
-          onClick={() => onSelect(option.code)}
-          aria-pressed={selected === option.code}
-          className={cn(
-            "flex-1 cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors sm:flex-none",
-            selected === option.code
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {option.name}
-        </button>
-      ))}
-    </div>
+    <Tabs value={selected} onValueChange={onSelect} className="w-full sm:w-fit">
+      <TabsList aria-label="Region" className="w-full sm:w-fit">
+        {options.map((option) => (
+          <TabsTrigger key={option.code} value={option.code} className="px-3 text-xs">
+            {option.name}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
   );
 }
-
 /**
  * One place's figures, in the slot beside the chart once a place is picked.
  *
@@ -169,14 +170,15 @@ export function OverviewCard({
     <Card className="h-full">
       <CardHeader>
         {onBack ? (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="xs"
             onClick={onBack}
-            className="-ml-1 inline-flex w-fit cursor-pointer items-center gap-0.5 rounded-sm px-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            className="-ml-2 w-fit text-muted-foreground"
           >
-            <ChevronLeft aria-hidden className="size-3.5" />
+            <ChevronLeft data-icon="inline-start" />
             {backLabel}
-          </button>
+          </Button>
         ) : null}
         <CardTitle>Overview</CardTitle>
         <CardDescription>
