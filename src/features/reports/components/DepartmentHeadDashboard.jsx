@@ -60,6 +60,7 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
+import { TbChartAreaLine } from "react-icons/tb";
 import { Link } from "react-router";
 
 import { ChartAreaGradient } from "@/components/charts/ChartAreaGradient";
@@ -523,7 +524,17 @@ function RegionsCard({ regions, total, period, isCustom, selected, onSelect, loa
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle>Regions</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          {/* Decorative. Blue to match the referrals series in the chart beside
+              it, with a dark pair so it reads in both themes. */}
+          <span
+            aria-hidden
+            className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400"
+          >
+            <TbChartAreaLine className="size-4" />
+          </span>
+          Regions
+        </CardTitle>
         <CardDescription>Ranked by conversion · {period}</CardDescription>
       </CardHeader>
       <CardContent className="flex min-h-0 flex-1 flex-col overflow-auto">
