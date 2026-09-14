@@ -23,6 +23,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { Progress } from "@/components/ui/progress";
 import {
   Table,
@@ -40,6 +49,7 @@ import {
   PLACE_HOVERS,
   conversionRate,
   formatCount,
+  pageItems,
   shareOf,
 } from "../dashboardFormat";
 
@@ -351,7 +361,7 @@ export function PlacesCard({
  *   rows         [{ code, name, parentName, total, approved, headName, headUserCode, headAvatarSrc }]
  *   showParent   Show `parentName` under the place's name (region or group).
  *   tabs         The region buttons, placed opposite the title.
- *   pageSize     Optional. Pages the rows, with Previous / Next. The parent
+ *   pageSize     Optional. Pages the rows with shadcn's Pagination. The parent
  *                should key this component on the scope so a new scope starts
  *                on page 1.
  */
@@ -379,6 +389,12 @@ export function PlacesTable({
   const currentPage = Math.min(page, pageCount);
   const firstIndex = pageSize ? (currentPage - 1) * pageSize : 0;
   const shown = pageSize ? ranked.slice(firstIndex, firstIndex + pageSize) : ranked;
+
+  // The page links are anchors (href="#"), so each click stays on the page.
+  const goTo = (target) => (event) => {
+    event.preventDefault();
+    setPage(Math.min(Math.max(1, target), pageCount));
+  };
 
   const emptyState = (
     <DataPlaceholder
@@ -469,34 +485,57 @@ export function PlacesTable({
           )}
         </div>
 
-        {/* Paging: "Showing 1–10 of 41" (hidden on phones) and Previous / Next. */}
+        {/* Paging -- shadcn's Pagination (Adrian): "Showing 1–10 of 136" on the
+            left (hidden on phones), Previous, page numbers, Next on the right. */}
         {pageSize && !isEmpty && ranked.length > pageSize ? (
           <div className="flex items-center justify-between gap-2 pt-3">
-            <span className="hidden text-xs text-muted-foreground tabular-nums sm:inline">
+            <span className="hidden shrink-0 text-xs text-muted-foreground tabular-nums sm:inline">
               Showing {firstIndex + 1}–{Math.min(firstIndex + pageSize, ranked.length)} of{" "}
               {ranked.length}
             </span>
-            <div className="ml-auto flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setPage(currentPage - 1)}
-                disabled={currentPage <= 1}
-                className="h-8 cursor-pointer rounded-md border border-input bg-background px-3 text-xs shadow-xs transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Previous
-              </button>
-              <button
-                type="button"
-                onClick={() => setPage(currentPage + 1)}
-                disabled={currentPage >= pageCount}
-                className="h-8 cursor-pointer rounded-md border border-input bg-background px-3 text-xs shadow-xs transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Next
-              </button>
-            </div>
+            <Pagination className="mx-0 w-auto sm:justify-end">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={goTo(currentPage - 1)}
+                    aria-disabled={currentPage <= 1}
+                    className={cn("text-xs", currentPage <= 1 && "pointer-events-none opacity-50")}
+                  />
+                </PaginationItem>
+                {pageItems(currentPage, pageCount).map((item, index) =>
+                  item === "ellipsis" ? (
+                    <PaginationItem key={`ellipsis-${index}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={item}>
+                      <PaginationLink
+                        href="#"
+                        onClick={goTo(item)}
+                        isActive={item === currentPage}
+                        className="text-xs tabular-nums"
+                      >
+                        {item}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ),
+                )}
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={goTo(currentPage + 1)}
+                    aria-disabled={currentPage >= pageCount}
+                    className={cn(
+                      "text-xs",
+                      currentPage >= pageCount && "pointer-events-none opacity-50",
+                    )}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
-        ) : null}
-      </CardContent>
+        ) : null}      </CardContent>
     </Card>
   );
 }

@@ -43,3 +43,23 @@ export const PLACE_HOVERS = [
   'hover:bg-amber-50/70 dark:hover:bg-amber-500/10',
   'hover:bg-rose-50/70 dark:hover:bg-rose-500/10',
 ]
+
+/**
+ * The page buttons to draw: the first, the last, and the current page with one
+ * either side; the gaps between become 'ellipsis'. On 14 pages at page 5:
+ * [1, 'ellipsis', 4, 5, 6, 'ellipsis', 14]. Seven pages or fewer show them all.
+ */
+export function pageItems(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, index) => index + 1)
+
+  const pages = new Set([1, total, current - 1, current, current + 1])
+  const sorted = [...pages].filter((page) => page >= 1 && page <= total).sort((a, b) => a - b)
+
+  const items = []
+  for (const page of sorted) {
+    const previous = items[items.length - 1]
+    if (typeof previous === 'number' && page - previous > 1) items.push('ellipsis')
+    items.push(page)
+  }
+  return items
+}

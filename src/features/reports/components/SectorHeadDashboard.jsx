@@ -4,27 +4,27 @@
  * Group (Group Head) -> Branch (Branch Head) -- so:
  *
  *   Department Head            Sector Head
- *   Regions card          ->   Groups card (in the regions shown)
+ *   Region buttons        ->   none -- the Groups card is the control (Adrian)
+ *   Regions card          ->   Groups card, every group
  *   a region's Overview   ->   a group's Overview, with "← Groups" back
  *   Groups table          ->   Branches table, 10 per page
  *
- * The NCR / Luzon / VisMin buttons stay as a filter: groups and branches are
- * shared geography, and the summary honours parentRegionCode for a Landbank
- * caller (backend Q4).
+ * No NCR / Luzon / VisMin buttons (Adrian, 2026-09-14): picking a group in the
+ * card narrows the chart, the Overview and the Branches table, which is all a
+ * Sector Head needs, and Landbank has no one heading a region.
  *
  * Presentational and CONTROLLED -- `pages/SectorHeadDashboardPage.jsx` owns
- * the period, the region and the group. The cards and table are shared with
+ * the period and the group. The cards and table are shared with
  * the Department Head's dashboard (./DashboardParts.jsx).
  *
  * The props contract:
  *
  *   preset / onPresetChange
- *   regions / selectedRegion / onSelectRegion   The region buttons.
- *   groups       [{ code, name, parentName, total, approved, head... }] -- the
- *                groups in the regions shown, over the period.
+ *   groups       [{ code, name, total, approved, head... }] -- every group,
+ *                over the period, zero included.
  *   selectedGroup / onSelectGroup   A group code, or null for the Groups list.
  *   tenant       { total, approved } for all of Landbank over the period.
- *   monthly / sliderRange          The chart, for the tenant, region or group.
+ *   monthly / sliderRange          The chart, for Landbank or the picked group.
  *   branches     [{ code, name, parentName, total, approved, head... }] -- the
  *                branches in view.
  *   summaryLoading / summaryError   The headline.
@@ -42,7 +42,6 @@ import {
   OverviewCard,
   PlacesCard,
   PlacesTable,
-  RegionScope,
 } from "./DashboardParts";
 
 const TENANT = "Landbank";
@@ -50,9 +49,6 @@ const TENANT = "Landbank";
 export function SectorHeadDashboard({
   preset,
   onPresetChange,
-  regions = [],
-  selectedRegion,
-  onSelectRegion,
   groups = [],
   selectedGroup,
   onSelectGroup,
@@ -74,32 +70,23 @@ export function SectorHeadDashboard({
 }) {
   const period = presetLabel(preset);
 
-  const activeRegion = regions.find((region) => region.code === selectedRegion) ?? null;
   const activeGroup = groups.find((group) => group.code === selectedGroup) ?? null;
 
-  // Narrowest first: a picked group, else a picked region, else all of Landbank.
-  const scope = activeGroup ?? activeRegion ?? { name: `All of ${TENANT}`, ...tenant };
-
-  const regionTabs = (
-    <RegionScope regions={regions} selected={selectedRegion} onSelect={onSelectRegion} />
-  );
+  // A picked group, else all of Landbank.
+  const scope = activeGroup ?? { name: `All of ${TENANT}`, ...tenant };
 
   return (
     <div className="flex w-full flex-col gap-5">
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-          <DashboardTitle subtitle={`Where ${TENANT} stands, and which group is behind`} />
-          <ExportControl
-            preset={preset}
-            onPresetChange={onPresetChange}
-            onExport={onExport}
-            isExporting={isExporting}
-            exportError={exportError}
-            scopeName={TENANT}
-          />
-        </div>
-
-        {regionTabs}
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+        <DashboardTitle subtitle={`Where ${TENANT} stands, and which group is behind`} />
+        <ExportControl
+          preset={preset}
+          onPresetChange={onPresetChange}
+          onExport={onExport}
+          isExporting={isExporting}
+          exportError={exportError}
+          scopeName={TENANT}
+        />
       </div>
 
       <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[3fr_2fr]">
@@ -117,8 +104,8 @@ export function SectorHeadDashboard({
           />
         </div>
 
-        {/* The groups in the regions shown, or once one is picked, that group's
-            figures with a way back to the list. */}
+        {/* Every group, or once one is picked, that group's figures with a way
+            back to the list. */}
         <div className="lg:h-96">
           {activeGroup ? (
             <OverviewCard
@@ -144,11 +131,7 @@ export function SectorHeadDashboard({
               error={summaryError ?? groupsError}
               tenantName={TENANT}
               noHeadLabel="No Group Head assigned"
-              emptyText={
-                activeRegion
-                  ? `No groups can be placed in ${activeRegion.name} yet.`
-                  : "No groups to show."
-              }
+              emptyText="No groups to show."
             />
           )}
         </div>
@@ -156,7 +139,7 @@ export function SectorHeadDashboard({
 
       <PlacesTable
         // A new scope or period starts the pages again at 1.
-        key={`${selectedRegion}-${selectedGroup ?? "all"}-${preset}`}
+        key={`${selectedGroup ?? "all"}-${preset}`}
         title="Branches"
         description={`${scope.name} · ranked by approval · ${period}`}
         rows={branches}
@@ -166,7 +149,6 @@ export function SectorHeadDashboard({
         headLabel="Branch Head"
         noHeadLabel="No Branch Head"
         showParent={!activeGroup}
-        tabs={regionTabs}
         emptyText={activeGroup ? `${activeGroup.name} has no branches yet.` : "No branches here yet."}
         pageSize={10}
       />
