@@ -18,6 +18,9 @@
  *   title          What the chart is. Shown in the footer, under the chart.
  *   description    One sentence under the title: what is plotted, and where.
  *   empty          What to say when data is empty. Name the reason.
+ *
+ * Referrals are drawn alone by default; a "Compare with approved" toggle in
+ * the header adds the approved series on top.
  *   loading / error   Passed to DataPlaceholder in place of the chart.
  *   className      Passed to the Card. Give the card's wrapper an explicit
  *                  height; the chart fills whatever is left after the header
@@ -26,13 +29,14 @@
  * ⚠️ THE MONTHLY SERIES HAS NO SOURCE IN THE API YET. See the note on
  * PLACEHOLDER in features/reports/pages/DashboardPage.jsx.
  */
-import { useId } from "react";
+import { useId, useState } from "react";
 import { HiUserGroup } from "react-icons/hi";
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 
 import { DataPlaceholder } from "@/components/DataPlaceholder";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
@@ -79,6 +83,11 @@ export function ChartAreaGradient({
   // screen from painting with each other's fill; its punctuation is stripped
   // because it has to survive inside `url(#...)`.
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
+
+  // Referrals alone by default (Adrian); approved is drawn only on request.
+  // Pure display state, so it lives here and survives the period and region
+  // changing underneath it.
+  const [showApproved, setShowApproved] = useState(false);
   const fillReferrals = `fillReferrals${uid}`;
   const fillApproved = `fillApproved${uid}`;
 
@@ -110,6 +119,35 @@ export function ChartAreaGradient({
           {loading || error || headline == null ? "—" : headline.toLocaleString("en-PH")}
         </CardTitle>
         {headlineLabel ? <CardDescription>{headlineLabel}</CardDescription> : null}
+
+        {/* Opposite the headline. A toggle, so it says whether it is on:
+            aria-pressed, and a green dot and tint -- the approved colour --
+            while the green series is showing. Hidden when there is no chart
+            to compare on. */}
+        {hasData && !loading && !error ? (
+          <CardAction>
+            <button
+              type="button"
+              aria-pressed={showApproved}
+              onClick={() => setShowApproved((shown) => !shown)}
+              className={cn(
+                "inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium shadow-xs transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+                showApproved
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400"
+                  : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+            >
+              <span
+                aria-hidden
+                className={cn(
+                  "size-2 rounded-full",
+                  showApproved ? "bg-emerald-500 dark:bg-emerald-400" : "bg-muted-foreground/40",
+                )}
+              />
+              Compare with approved
+            </button>
+          </CardAction>
+        ) : null}
       </CardHeader>
 
       {/* `flex-1 min-h-0` lets the chart shrink to what is left of the card.
@@ -164,13 +202,15 @@ export function ChartAreaGradient({
                 fillOpacity={0.4}
                 stroke="var(--color-referrals)"
               />
-              <Area
-                dataKey="approved"
-                type="natural"
-                fill={`url(#${fillApproved})`}
-                fillOpacity={0.4}
-                stroke="var(--color-approved)"
-              />
+              {showApproved ? (
+                <Area
+                  dataKey="approved"
+                  type="natural"
+                  fill={`url(#${fillApproved})`}
+                  fillOpacity={0.4}
+                  stroke="var(--color-approved)"
+                />
+              ) : null}
             </AreaChart>
           </ChartContainer>
         )}

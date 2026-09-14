@@ -216,7 +216,7 @@ export function DepartmentHeadDashboard({
                 : `Total referrals · ${period}`
             }
             title="Referrals by month"
-            description={`${scope.name} · referred and approved, ${period}`}
+            description={`${scope.name} · ${period}`}
             empty={isCustom ? "Pick a date range to see the chart." : "No referrals in this period."}
             loading={loading}
             error={error}
