@@ -567,14 +567,15 @@ function RegionsCard({ regions, total, period, isCustom, selected, onSelect, loa
                       </div>
                       <div className="shrink-0 text-right">
                         <div className="font-medium tabular-nums">
-                          {rate != null ? `${rate}%` : "—"}
+                          {region.total.toLocaleString("en-PH")}
                         </div>
-                        <div className="text-xs text-muted-foreground">converted</div>
+                        <div className="text-xs text-muted-foreground">referrals</div>
                       </div>
                     </div>
 
                     {/* The bar is the conversion rate, matching the ranking, so
-                        the two can never disagree. */}
+                        the two can never disagree. The line under it says the
+                        same figure in words. */}
                     <div aria-hidden className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                       <div
                         className="h-full rounded-full bg-primary"
@@ -584,11 +585,9 @@ function RegionsCard({ regions, total, period, isCustom, selected, onSelect, loa
 
                     <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
                       <span className="tabular-nums">
-                        {region.total.toLocaleString("en-PH")} referrals · {share}% of PhilLife
+                        {rate != null ? `${rate}% approved` : "No referrals in this period"}
                       </span>
-                      {region.stalled > 0 ? (
-                        <span className="tabular-nums">{region.stalled} stalled</span>
-                      ) : null}
+                      <span className="tabular-nums">{share}% of PhilLife</span>
                     </div>
                   </button>
                 </li>
