@@ -1,11 +1,13 @@
 /**
- * ============================================================================
- *  THIS FILE IS YOURS. Restyle it freely.
- * ============================================================================
+ * The Department Head's dashboard, built on context/FRONTEND_DESIGN_PATTERN.md.
+ * Header, the region choice, then the chart with a side panel beside it --
+ * Regions while every region is showing, that region's Overview once one is
+ * picked -- and below them a table of the groups under the regions.
  *
- * Presentational. `pages/DashboardPage.jsx` supplies every prop. Right now it
- * supplies HARDCODED numbers so you can design against something that looks
- * real -- when the API is wired, only that file changes and this one does not.
+ * Presentational and CONTROLLED. `pages/DashboardPage.jsx` owns the period and
+ * the region, because both change which requests are made, and hands down
+ * figures already shaped for the period by `../dashboardData.js`. Nothing here
+ * computes a period.
  *
  * WHAT THIS SCREEN IS FOR. A Department Head oversees the whole PhilLife
  * tenant. They do not refer and do not work referrals -- an Account Officer
@@ -14,464 +16,652 @@
  *
  * The props contract:
  *
- *   approved     Number. How many of `total` reached Approved. The half a bare
- *                total cannot show: 310 referrals reads the same whether all
- *                310 closed or none did. Each region carries its own, so the
- *                figure follows the tab.
- *   stalled      Number, with `stalledDays`. Referrals whose status has not
- *                moved in that long.
- *                ⚠️ FOURTEEN DAYS IS AN ASSUMPTION, not a rule from anywhere.
- *                Nothing in BusinessLogic.md defines when a referral counts as
- *                stuck. Confirm it with whoever owns the process before this
- *                number is shown to them.
- *   unassignedOfficers  Number. Account Officers approved but holding no
- *                branches. A tier below what a DH acts on -- an Area Sales Head
- *                assigns those -- but the DH is the only one who sees the whole
- *                tenant, and such an account cannot refer at all.
- *   notifications  [{ id, text, at }]. `at` is a UTC timestamp.
- *   total        Number. Every referral in PhilLife. ALWAYS ALL TIME -- there
- *                is no date filter and there cannot be one, because one of the
- *                two stored procedures behind the endpoint takes no date. Say
- *                so on screen or the number reads as "this month".
- *   regions      [{ code, name, total, headName, headUserCode, groups }] -- THREE rows
- *                today: NCR, Luzon, VisMin. `banc.regions` holds three, and
- *                there is one Regional Sales Head each. Three is not enough
- *                for a table; cards are the better shape.
- *
- *                ⚠️ `headName` and `headUserCode` MAY BE NULL. The totals are
- *                grouped by region -- by geography, not by person -- on purpose:
- *                grouping by the people table would move a region's history
- *                whenever somebody changed job. So the head is a label beside
- *                the number, never the thing the number is counted by.
- *
- *                `monthly` is [{ month, desktop }] -- that region's own numbers
- *                for the bar chart, and they MUST sum to the region's `total`.
- *                It is what makes the bars a breakdown of the picked region
- *                rather than of the whole tenant.
- *                ⚠️ THERE IS NO TREND FIGURE AVAILABLE, anywhere. A "+8%" style
- *                badge would need this period against a previous one, and
- *                GET /reports/dashboard takes no period at all. The Regions
- *                panel shows share of the total instead -- 310 of 847 is 37% --
- *                which is a real number the same shape and answers the same
- *                question the badge was reaching for.
- *   pendingApprovals   Number. Regional Sales Heads waiting on this DH.
- *   unassignedHeads    Number. Approved RSHs holding no region yet. THIS ONE
- *                      MATTERS: such an account sees an empty dashboard with
- *                      nothing explaining why, and the DH is the only role who
- *                      can fix it.
- *
- * Pure-UI state may live here. Anything that touches the server belongs in the
- * container instead.
+ *   preset / onPresetChange   The period. Custom is not offered until there is
+ *                a date picker.
+ *   selected / onSelect       ALL_REGIONS or a region code. The top buttons and
+ *                the Groups tabs are both this one value.
+ *   tenant       { total, approved } for all of PhilLife over the period.
+ *   regions      [{ code, name, total, approved, headName, headUserCode,
+ *                headAvatarSrc }] -- every region, over the period, zero
+ *                included. Head fields MAY BE NULL: totals are grouped by
+ *                geography, so a region can sit without a head.
+ *   monthly      [{ month: "2026-09", referrals, approved }] for the tenant or
+ *                the picked region, over the period. All time is January to
+ *                December of this year; months after now have null values.
+ *   sliderRange  { startIndex, endIndex } on All time -- the chart shows a
+ *                slider under the axis, opening on that range. Null otherwise.
+ *   groups       [{ code, name, regionName, total, approved, headName,
+ *                headUserCode, headAvatarSrc }] -- the groups in view. One Area
+ *                Sales Head may hold several, so a name can repeat.
+ *   summaryLoading / summaryError   Headline, Regions and Overview.
+ *   chartLoading / chartError       The chart.
+ *   groupsLoading / groupsError     The Groups table.
+ *   onExport(preset) / isExporting / exportError
  */
-import { useState } from "react";
+import { ChartPie, CircleCheck, Download, FileText, Percent } from "lucide-react";
+import { TbChartAreaLine } from "react-icons/tb";
+
+import { ChartAreaGradient } from "@/components/charts/ChartAreaGradient";
+import { DataPlaceholder } from "@/components/DataPlaceholder";
+import { StatTile } from "@/components/StatTile";
+import { UserAvatar } from "@/components/UserAvatar";
 import {
-  LuArrowRight,
-  LuClock,
-  LuUserCheck,
-  LuUserPlus,
-  LuUsers,
-} from "react-icons/lu";
-import { Link } from "react-router";
-
-import { ChartAreaDefault } from "@/components/charts/ChartAreaDefault";
-import { ChartBarLabelCustom } from "@/components/charts/ChartBarLabelCustom";
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { DATE_PRESET, DATE_PRESETS } from "@/constants/presets";
-import { formatRelative, formatWeekdayDate } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
-import { paths } from "@/routes/paths";
-import { CiCalendarDate } from "react-icons/ci";
-import { VscListFilter } from "react-icons/vsc";
-import { BsDownload } from "react-icons/bs";
-import { MdOutlineLandscape } from "react-icons/md";
 
-/** The "everything" tab. Not a region code, so it cannot collide with one. */
-const ALL = "ALL";
+import { ALL_REGIONS as ALL } from "../dashboardData";
+
+/**
+ * The periods on offer. Custom is left out until there is a date picker --
+ * without dates it could only ever show a dash (Adrian, 2026-09-14).
+ */
+const PERIOD_OPTIONS = DATE_PRESETS.filter((option) => option.value !== DATE_PRESET.CUSTOM);
+
+/** Approved as a whole percentage of referrals, or null when there is nothing to divide. */
+function conversionRate(approved, total) {
+  if (!total || approved == null) return null;
+  return Math.round((approved / total) * 100);
+}
+
+function formatCount(value) {
+  return value == null ? null : value.toLocaleString("en-PH");
+}
+
+function presetLabel(value) {
+  return DATE_PRESETS.find((option) => option.value === value)?.label.toLowerCase() ?? "";
+}
 
 export function DepartmentHeadDashboard({
-  total,
-  approved,
-  stalled,
-  stalledDays,
-  regions,
-  pendingApprovals,
-  unassignedHeads,
-  unassignedOfficers,
-  notifications = [],
+  preset,
+  onPresetChange,
+  selected,
+  onSelect,
+  tenant = { total: null, approved: null },
+  regions = [],
+  monthly = [],
+  sliderRange = null,
+  groups = [],
+  summaryLoading = false,
+  summaryError = null,
+  chartLoading = false,
+  chartError = null,
+  groupsLoading = false,
+  groupsError = null,
+  onExport,
+  isExporting = false,
+  exportError = null,
 }) {
-  // Which tab is picked -- ALL, or a region's code.
-  const [selected, setSelected] = useState(ALL);
+  const period = presetLabel(preset);
 
-  // The period the EXPORT covers. Nothing to do with the figures on screen --
-  // see the note on the toolbar below.
-  const [exportPreset, setExportPreset] = useState(DATE_PRESET.ALL_TIME);
+  // `find` rather than trusting `selected`: a selection that no longer names a
+  // region renders everything instead of a blank number.
+  const activeRegion = regions.find((region) => region.code === selected) ?? null;
+  const scope = activeRegion ?? { name: "All of PhilLife", ...tenant };
 
-  // `find` rather than trusting `selected`: if the regions change under a
-  // selection that no longer exists, this falls back to everything instead of
-  // rendering a blank number.
-  const activeRegion =
-    regions.find((region) => region.code === selected) ?? null;
-
-  const shownTotal = activeRegion ? activeRegion.total : total;
-  const shownApproved = activeRegion ? activeRegion.approved : approved;
-
-  // Every one of these figures is all time -- the region tabs narrow the PLACE,
-  // never the period. Saying so on each keeps the tab labelled "All time" from
-  // implying the others are not.
-  const shownDescription = activeRegion
-    ? `${activeRegion.name} referrals · all time`
-    : "Total referrals · all time";
+  const rate = conversionRate(scope.approved, scope.total);
+  // The region's share of PhilLife's referrals over the same period: the
+  // region's row over the sum of every region's row, both from one call.
+  const share =
+    activeRegion && tenant.total > 0
+      ? Math.round((activeRegion.total / tenant.total) * 100)
+      : activeRegion
+        ? 0
+        : null;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="text-xl font-semibold">Dashboard</h1>
+    // DOM order is the phone order: header, region choice, chart, the side
+    // panel, then the groups table. From lg the chart and the side panel share a
+    // row, three fifths to two fifths.
+    <div className="flex w-full flex-col gap-5">
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <div>
+            <h1 className="text-xl font-semibold md:text-2xl">Dashboard</h1>
+            <p className="text-sm text-muted-foreground">
+              Where PhilLife stands, and which region is behind
+            </p>
+          </div>
 
-        {/* Manila, like every other date on screen -- a viewer in another
-            timezone should read the same day the data is filed under. */}
-        <span className="text-xs text-muted-foreground">
-          {formatWeekdayDate()}
-        </span>
+          <ExportControl
+            preset={preset}
+            onPresetChange={onPresetChange}
+            onExport={onExport}
+            isExporting={isExporting}
+            exportError={exportError}
+          />
+        </div>
+
+        <RegionScope regions={regions} selected={selected} onSelect={onSelect} />
       </div>
 
-      {/* The line under the headline is still shadcn's demo data. The headline
-          number itself is the real one, and it follows the tab. */}
-      <div className="flex h-96 flex-col gap-1">
-        {/* Derived from `regions` rather than spelled out, so a region added or
-            renamed in the data does not need a tab added here to match. */}
-        <div className="flex justify-between items-center p-1 gap-3">
-          <div className="h-full flex gap-3">
-            {[{ code: ALL, name: "All time" }, ...regions].map((tab) => (
-            <button
-              key={tab.code}
-              type="button"
-              onClick={() => setSelected(tab.code)}
-              aria-pressed={selected === tab.code}
-              className={cn(
-                "border cursor-pointer text-xs py-1 px-3 rounded-sm transition-colors",
-                selected === tab.code
-                  ? "bg-blue-950 text-white border-blue-950"
-                  : "hover:bg-muted",
-              )}
-            >
-              {tab.name}
-            </button>
-          ))}
-          </div>
-
-          <div className="flex items-center gap-5">
-          <div className="border flex justify-center items-center gap-1 rounded-sm py-1 px-4">
-            <VscListFilter />
-            <span className="text-xs">Filter</span>
-          </div>
-
-          {/*
-            THE PERIOD BELONGS TO THE EXPORT, not to the screen.
-
-            It used to sit on its own next to Filter, which read as a filter on
-            the figures -- and those cannot be filtered by date. The dashboard
-            endpoint binds no date at all, so a period control over it would
-            change nothing while looking like it had.
-
-            GET /reports/export DOES take these presets, so attached to the
-            button it is real. Joined into one control so the two are obviously
-            a pair: this range, that download.
-          */}
-          <div className="flex items-center rounded-sm border">
-            <CiCalendarDate className="ml-2 shrink-0" />
-            <select
-              value={exportPreset}
-              onChange={(event) => setExportPreset(event.target.value)}
-              aria-label="Period to export"
-              className="cursor-pointer bg-transparent py-1 pl-1 pr-2 text-xs outline-none"
-            >
-              {DATE_PRESETS.map((preset) => (
-                <option key={preset.value} value={preset.value}>
-                  {preset.label}
-                </option>
-              ))}
-            </select>
-
-            <button className="cursor-pointer bg-blue-950 text-white rounded-r-sm py-1 px-4 flex justify-center items-center gap-2">
-              <BsDownload size={14} />
-              <span className=" text-[10px]">Export Data</span>
-            </button>
-          </div>
-        </div>
+      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[3fr_2fr]">
+        {/* Explicit height, so the card inside fills it and the chart takes what
+            is left, rather than the chart deciding the page's height. */}
+        <div className="h-[26rem] md:h-96">
+          <ChartAreaGradient
+            data={monthly}
+            headline={scope.total}
+            headlineLabel={`Total referrals · ${period}`}
+            title="Referrals by month"
+            description={`${scope.name} · ${period}`}
+            sliderRange={sliderRange}
+            empty="No referrals in this period."
+            loading={chartLoading}
+            error={chartError}
+          />
         </div>
 
-        
-
-        {/* `min-h-0 flex-1` and not `h-full`: h-full would be the full 384px of
-            the h-96 above, on top of the tab row, so the charts would hang out
-            the bottom by the height of the tabs. */}
-        <div className="flex min-h-0 flex-1 gap-2">
-          <div className="w-[65%]">
-            <ChartAreaDefault
-              className="h-full"
-              total={shownTotal}
-              approved={shownApproved}
-              description={shownDescription}
+        {/* The slot beside the chart. With every region showing it is the way
+            INTO a region; once one is picked it becomes that region's figures.
+            Same height as the chart from lg, and scrolls inside if it must. */}
+        <div className="lg:h-96">
+          {activeRegion ? (
+            <OverviewCard
+              scope={scope}
+              share={share}
+              rate={rate}
+              period={period}
+              loading={summaryLoading}
+              error={summaryError}
             />
-          </div>
-
-          <div className="w-[35%]">
-            {activeRegion ? (
-              // Scoped to the picked region, never to the tenant: these six add up
-              // to the headline beside them -- NCR's to 310, not to 847.
-              <ChartBarLabelCustom
-                className="h-full"
-                data={activeRegion.monthly}
-              />
-            ) : (
-              <RegionsPanel
-                regions={regions}
-                total={total}
-                onSelect={setSelected}
-              />
-            )}
-          </div>
+          ) : (
+            <RegionsCard
+              regions={regions}
+              total={tenant.total}
+              period={period}
+              selected={selected}
+              onSelect={onSelect}
+              loading={summaryLoading}
+              error={summaryError}
+            />
+          )}
         </div>
       </div>
 
-      {/* The only two things a Department Head can act on. Hidden at zero --
-          an empty queue is not news. */}
-      {pendingApprovals > 0 ||
-      unassignedHeads > 0 ||
-      unassignedOfficers > 0 ||
-      stalled > 0 ? (
-        <div className="flex flex-col gap-2">
-          {unassignedHeads > 0 ? (
-            <ActionRow
-              Icon={LuUserPlus}
-              to={paths.people}
-              label={
-                unassignedHeads === 1
-                  ? "1 Regional Sales Head has no region yet"
-                  : `${unassignedHeads} Regional Sales Heads have no region yet`
-              }
-              note="Until they do, their screens are empty and nothing says why."
-            />
-          ) : null}
-
-          {pendingApprovals > 0 ? (
-            <ActionRow
-              Icon={LuUserCheck}
-              to={paths.approvals}
-              label={
-                pendingApprovals === 1
-                  ? "1 account is waiting for your approval"
-                  : `${pendingApprovals} accounts are waiting for your approval`
-              }
-            />
-          ) : null}
-
-          {/* One tier further down than the DH acts on -- an Area Sales Head
-              assigns branches, not them. It is here because the DH is the only
-              one looking at the whole tenant: an Account Officer with no
-              branches cannot create a referral and their screen never says so. */}
-          {unassignedOfficers > 0 ? (
-            <ActionRow
-              Icon={LuUsers}
-              to={paths.people}
-              label={
-                unassignedOfficers === 1
-                  ? "1 Account Officer holds no branches"
-                  : `${unassignedOfficers} Account Officers hold no branches`
-              }
-              note="They cannot create referrals until an Area Sales Head assigns them."
-            />
-          ) : null}
-
-          {stalled > 0 ? (
-            <ActionRow
-              Icon={LuClock}
-              to={paths.referrals}
-              label={`${stalled} referrals have not moved in ${stalledDays} days`}
-              note="Concentrated in Luzon. Worth asking its Regional Sales Head why."
-            />
-          ) : null}
-        </div>
-      ) : null}
-
-      {notifications.length > 0 ? (
-        <div className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
-          <h2 className="text-sm font-medium">Latest activity</h2>
-
-          <ul className="flex flex-col gap-1.5">
-            {notifications.map((item) => (
-              <li
-                key={item.id}
-                className="flex items-baseline justify-between gap-4 text-xs"
-              >
-                <span>{item.text}</span>
-                {/* Relative, not absolute: on a feed the gap is the useful part,
-                    and it stays readable without doing arithmetic. */}
-                <span className="shrink-0 text-muted-foreground">
-                  {formatRelative(item.at)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
+      <GroupsCard
+        regions={regions}
+        groups={groups}
+        selected={selected}
+        onSelect={onSelect}
+        period={period}
+        loading={groupsLoading}
+        error={groupsError}
+      />
     </div>
   );
 }
 
 /**
- * The three regions, side by side, in the slot the bar chart leaves empty when
- * the view is everything.
- *
- * Each row is a button: pressing it picks that region's tab, so this panel
- * doubles as the way INTO a region rather than only a readout of one. That is
- * why the whole row is the target and not just the name.
- *
- * The share bar is the point of the panel. Three numbers on their own are hard
- * to weigh against each other; the same three as proportions of the whole are
- * readable at a glance, which is the question a Department Head is actually
- * asking.
+ * One region's figures, in the slot the Regions list leaves when a region is
+ * picked, over the picked period. The fourth tile was Stalled until the
+ * backend withdrew R4 -- stalled belongs on the dashboards of the people who
+ * move referrals -- and is now the region's share of PhilLife (Adrian).
  */
-/** Approved as a percentage of that region's own referrals. */
-function rateOf(region) {
-  if (!region.total || region.approved == null) return null;
-  return Math.round((region.approved / region.total) * 100);
+function OverviewCard({ scope, share, rate, period, loading, error }) {
+  return (
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle>Overview</CardTitle>
+        <CardDescription>
+          {scope.name} · {period}
+        </CardDescription>
+        {/* Who runs this region, beside what it did. CardAction puts it in the
+            header's right column, level with the title. A region without a
+            head says so rather than leaving the corner empty. */}
+        <CardAction className="flex min-w-0 items-center gap-2">
+          <UserAvatar src={scope.headAvatarSrc} name={scope.headName} size="md" />
+          <div className="min-w-0">
+            <div className="truncate text-xs font-medium">
+              {scope.headName ?? "No one assigned"}
+            </div>
+            <div className="truncate text-xs text-muted-foreground">Regional Sales Head</div>
+          </div>
+        </CardAction>
+      </CardHeader>
+      <CardContent className="min-h-0 flex-1 overflow-auto">
+        {loading || error ? (
+          <DataPlaceholder loading={loading} error={error} loadingLabel="Loading figures..." />
+        ) : (
+          <div className="grid auto-rows-fr grid-cols-2 gap-3">
+            <StatTile
+              label={`Referrals · ${period}`}
+              value={formatCount(scope.total)}
+              icon={FileText}
+              accent="total"
+            />
+            <StatTile
+              label={`Approved · ${period}`}
+              value={formatCount(scope.approved)}
+              icon={CircleCheck}
+              accent="done"
+              hint={scope.total != null ? `Of ${formatCount(scope.total)} referrals` : null}
+            />
+            <StatTile
+              label={`Conversion · ${period}`}
+              value={rate != null ? `${rate}%` : null}
+              icon={Percent}
+              hint="Approved out of referred"
+            />
+            <StatTile
+              label={`Share of PhilLife · ${period}`}
+              value={share != null ? `${share}%` : null}
+              icon={ChartPie}
+              hint="Of all PhilLife referrals"
+            />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
-function RegionsPanel({ regions, total, onSelect }) {
-  /*
-    Ranked by conversion, NOT by volume, and that is the point of the panel.
+/**
+ * The period, and the download.
+ *
+ * The period drives the whole screen: the headline, the chart, the Regions or
+ * Overview panel, and the Groups table. The EXPORT does not follow the region
+ * -- it is always the caller's whole scope (backend Q2) -- so the button says
+ * so, rather than looking like it downloads what the tabs show.
+ */
+function ExportControl({ preset, onPresetChange, onExport, isExporting, exportError }) {
+  return (
+    <div className="flex flex-col gap-1 sm:items-end">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <label htmlFor="dashboard-export-period" className="sr-only">
+          Period
+        </label>
+        <select
+          id="dashboard-export-period"
+          value={preset}
+          onChange={(event) => onPresetChange(event.target.value)}
+          className="h-8 w-full cursor-pointer rounded-md border border-input bg-background px-2.5 text-xs shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:w-40"
+        >
+          {PERIOD_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
 
-    In volume order the biggest region is always on top and the worst performer
-    sits at the bottom where nobody looks. Ranking by how much each region
-    actually closes puts the one that needs attention where it will be seen --
-    a small region closing well should outrank a large one that is not.
+        <button
+          type="button"
+          onClick={() => onExport?.(preset)}
+          disabled={isExporting}
+          className="inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground shadow-xs transition-colors hover:bg-primary/90 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50"
+        >
+          <Download aria-hidden className="size-3.5" />
+          {isExporting ? "Exporting…" : "Export all of PhilLife"}
+        </button>
+      </div>
 
-    `slice` first: `sort` mutates, and this array is a prop.
-  */
-  const ranked = [...regions].sort((a, b) => (rateOf(b) ?? 0) - (rateOf(a) ?? 0));
+      {exportError ? (
+        <p role="alert" className="text-xs text-destructive">
+          {exportError.message}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+/**
+ * Which place the tiles and the chart describe. Built from `regions`, so a
+ * region added in the data needs nothing added here.
+ */
+function RegionScope({ regions, selected, onSelect }) {
+  const options = [{ code: ALL, name: "All regions" }, ...regions];
 
   return (
-    <div className="flex h-full flex-col gap-3 rounded-xl border border-border bg-card p-4">
-      <div className="flex w-full items-center gap-3 rounded-sm">
-        <MdOutlineLandscape
-          size={25}
-          color="white"
-          className="rounded-full bg-[#0a90c8] p-1"
-        />
-        <span className="text-lg font-bold">Regions</span>
-        <span className="ml-auto text-[10px] text-muted-foreground">
-          by conversion
-        </span>
-      </div>
-
-      {total === 0 ? (
-        // Not three rows of zeroes. banc.Referrals starts empty, and a column
-        // of zeroes reads as a broken query rather than as "nothing yet".
-        <p className="flex min-h-0 flex-1 items-center rounded-sm border border-dashed border-border p-4 text-xs text-muted-foreground">
-          No referrals have been recorded yet. Regional totals will appear here
-          as branches and Account Officers start using the system.
-        </p>
-      ) : (
-      /* min-h-0 so the list scrolls inside the card rather than stretching it,
-         if a fourth region ever appears. */
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
-        {ranked.map((region) => {
-          // Guarded: `total` is 0 before any referral exists, and the panel
-          // still has to render.
-          const share = total > 0 ? Math.round((region.total / total) * 100) : 0;
-          const rate = rateOf(region);
-
-          return (
-            <button
-              key={region.code}
-              type="button"
-              onClick={() => onSelect(region.code)}
-              className="w-full rounded-sm border border-border p-3 text-left transition-colors hover:bg-muted/50"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <span className="text-[15px] font-bold text-neutral-500">
-                  {region.name}
-                </span>
-
-                <span className="flex flex-col items-end leading-tight">
-                  {/* Null is ordinary -- a region can sit without a head, and
-                      that gap is worth reading rather than hiding. */}
-                  <span className="text-xs font-bold">
-                    {region.headName ?? "No Regional Sales Head"}
-                  </span>
-                  <span className="text-[10px] text-neutral-500">
-                    {region.headUserCode ?? "Nobody assigned yet"}
-                  </span>
-                </span>
-              </div>
-
-              <div className="mt-1 flex items-baseline gap-2">
-                <span className="text-xl font-bold tabular-nums">
-                  {region.total.toLocaleString()}
-                </span>
-                {/* Neutral, not green. A conversion rate is a standing, not a
-                    change -- green would read as growth, and there is no trend
-                    figure available anywhere. */}
-                {rate != null ? (
-                  <span className="rounded-lg bg-muted px-1.5 text-[10px] text-muted-foreground">
-                    {rate}% converted
-                  </span>
-                ) : null}
-                <span className="ml-auto text-[10px] text-muted-foreground">
-                  {share}% of PhilLife
-                </span>
-              </div>
-
-              {/* The bar is the conversion rate, matching the order of the list.
-                  Reading it as "how full" answers the same question the ranking
-                  does, so the two cannot disagree. */}
-              <div
-                aria-hidden
-                className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted"
-              >
-                <div
-                  className="h-full rounded-full bg-[#0a90c8]"
-                  style={{ width: `${rate ?? 0}%` }}
-                />
-              </div>
-
-              {region.stalled > 0 ? (
-                <p className="mt-2 text-[10px] text-muted-foreground">
-                  {region.stalled} not moved recently
-                </p>
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
-      )}
+    <div
+      role="group"
+      aria-label="Region"
+      className="flex w-full rounded-lg bg-muted p-1 sm:w-fit"
+    >
+      {options.map((option) => (
+        <button
+          key={option.code}
+          type="button"
+          onClick={() => onSelect(option.code)}
+          aria-pressed={selected === option.code}
+          className={cn(
+            "flex-1 cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors sm:flex-none",
+            selected === option.code
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {option.name}
+        </button>
+      ))}
     </div>
   );
 }
 
-function ActionRow({ Icon, to, label, note }) {
+/**
+ * One hover tint per region -- the only per-region colour on the card, and
+ * Adrian's pick. Assigned by the region's position in `regions`, NOT by rank,
+ * so a row keeps its tint when the period reorders the list. Faint, with a
+ * dark pair. Full class strings, so Tailwind can see them.
+ */
+const REGION_HOVERS = [
+  "hover:bg-indigo-50/70 dark:hover:bg-indigo-500/10",
+  "hover:bg-cyan-50/70 dark:hover:bg-cyan-500/10",
+  "hover:bg-amber-50/70 dark:hover:bg-amber-500/10",
+  "hover:bg-rose-50/70 dark:hover:bg-rose-500/10",
+];
+
+/**
+ * The regions, ranked by conversion -- NOT by volume. In volume order the
+ * biggest region always sits on top and the weakest closer sits at the bottom
+ * where nobody looks.
+ *
+ * Each row is also the way into that region: pressing it picks it above, and
+ * the picked row stays highlighted so the two controls cannot disagree.
+ */
+function RegionsCard({ regions, total, period, selected, onSelect, loading, error }) {
+  // Tint follows the region's place in `regions`; order follows conversion.
+  // Copy before sorting: `sort` mutates.
+  const ranked = regions
+    .map((region, index) => ({ ...region, hover: REGION_HOVERS[index % REGION_HOVERS.length] }))
+    .sort(
+      (a, b) =>
+        (conversionRate(b.approved, b.total) ?? 0) - (conversionRate(a.approved, a.total) ?? 0),
+    );
+
   return (
-    <Link
-      to={to}
-      className="group flex items-start gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted/50"
-    >
-      <Icon
-        aria-hidden
-        className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-      />
+    // The card itself carries the design: a faint blue wash from the top that
+    // fades into the card colour, and a blue-tinted border, both keyed to the
+    // title icon. The rows inside stay plain.
+    // Tighter than the Card default (py-6, gap-6): the header was too airy for a
+    // panel this short, per Adrian. The rows keep their own px-6.
+    <Card className="h-full gap-3 py-4 border-blue-100 bg-linear-to-b from-blue-50/80 via-card to-card dark:border-blue-500/20 dark:from-blue-500/10">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          {/* Decorative. Blue to match the referrals series in the chart beside
+              it, with a dark pair so it reads in both themes. */}
+          <span
+            aria-hidden
+            className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400"
+          >
+            <TbChartAreaLine className="size-4" />
+          </span>
+          Regions
+        </CardTitle>
+        <CardDescription>Ranked by conversion · {period}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex min-h-0 flex-1 flex-col overflow-auto">
+        {loading || error || !total ? (
+          // Not three rows of zeroes. A column of zeroes reads as a broken
+          // query rather than as "nothing yet".
+          <DataPlaceholder
+            loading={loading}
+            error={error}
+            empty="No referrals in this period. Regional figures appear once branches refer."
+            loadingLabel="Loading regions..."
+          />
+        ) : (
+          <ul className="-mx-6 divide-y border-y">
+            {ranked.map((region) => {
+              const rate = conversionRate(region.approved, region.total);
+              const share = Math.round((region.total / total) * 100);
+              const isSelected = selected === region.code;
 
-      <span className="flex flex-1 flex-col gap-0.5">
-        <span className="text-sm font-medium">{label}</span>
-        {note ? (
-          <span className="text-xs text-muted-foreground">{note}</span>
+              return (
+                <li key={region.code}>
+                  <button
+                    type="button"
+                    onClick={() => onSelect(isSelected ? ALL : region.code)}
+                    aria-pressed={isSelected}
+                    className={cn(
+                      "flex w-full cursor-pointer flex-col gap-2 px-6 py-3 text-left transition-colors",
+                      isSelected ? "bg-muted" : region.hover,
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="font-medium">{region.name}</div>
+                        {/* Null is ordinary, and the gap is worth reading --
+                            the avatar shows an empty-seat icon rather than
+                            disappearing. */}
+                        <div className="mt-1 flex min-w-0 items-center gap-1.5">
+                          <UserAvatar
+                            src={region.headAvatarSrc}
+                            name={region.headName}
+                            size="sm"
+                          />
+                          <span className="truncate text-xs text-muted-foreground">
+                            {region.headName
+                              ? `${region.headName} · ${region.headUserCode}`
+                              : "No Regional Sales Head assigned"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        {/* Blue, Adrian's colour for referrals -- the same blue as
+                            the chart's referrals line. Lighter in dark mode,
+                            where #155dfc is too deep to read on the card. */}
+                        <div className="font-medium tabular-nums text-[#155dfc] dark:text-blue-400">
+                          {region.total.toLocaleString("en-PH")}
+                        </div>
+                        <div className="text-xs text-muted-foreground">referrals</div>
+                      </div>
+                    </div>
+
+                    {/* The bar is the conversion rate, matching the ranking, so
+                        the two can never disagree. The line under it says the
+                        same figure in words. shadcn's Progress in #00bb7c --
+                        green for approved, as in the Groups table; 0 rather
+                        than null so an empty region never draws as
+                        indeterminate. */}
+                    <Progress
+                      value={rate ?? 0}
+                      aria-label={`${region.name} approved`}
+                      className="w-full [&_[data-slot=progress-indicator]]:bg-[#00bb7c]"
+                    />
+
+                    <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                      <span className="tabular-nums">
+                        {rate != null ? `${rate}% approved` : "No referrals in this period"}
+                      </span>
+                      <span className="tabular-nums">{share}% of PhilLife</span>
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * The groups under the regions, one row each: the group, its Area Sales Head,
+ * how much of its referrals were approved, and how many it had.
+ *
+ * The tabs above the table ARE the region choice at the top of the dashboard
+ * -- the same state, not a copy -- so picking NCR in either place narrows the
+ * chart, the side panel and this table together (Adrian's call). The period
+ * dropdown narrows it too.
+ *
+ * Ranked by approval, like the Regions card, so a group that is not closing
+ * does not hide under a big one. A group with no referrals in the period sinks
+ * to the bottom rather than reading as 0%.
+ *
+ * One component, two renderings (pattern §6): a real table from md up, a card
+ * list below it -- never a table scrolling sideways on a phone.
+ */
+function GroupsCard({ regions, groups, selected, onSelect, period, loading, error }) {
+  const showAll = !regions.some((region) => region.code === selected);
+  const scopeName = showAll ? "All of PhilLife" : regions.find((r) => r.code === selected).name;
+
+  // `groups` arrives already narrowed to the region in view and to the period.
+  const rows = groups
+    .map((group) => ({ ...group, rate: conversionRate(group.approved, group.total) }))
+    .sort((a, b) => (b.rate ?? -1) - (a.rate ?? -1));
+
+  const emptyState = (
+    <DataPlaceholder
+      loading={loading}
+      error={error}
+      empty="No groups with referrals or an Area Sales Head in this region yet."
+      loadingLabel="Loading groups..."
+    />
+  );
+  const isEmpty = loading || error || rows.length === 0;
+
+  return (
+    <Card>
+      {/* Title on the left, tabs on the right, level with each other from md
+          (space-between, per Adrian). Stacked on a phone, where the tabs take
+          the full width. */}
+      <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="space-y-1.5">
+          <CardTitle>Groups</CardTitle>
+          <CardDescription>
+            {scopeName} · ranked by approval · {period}
+          </CardDescription>
+        </div>
+        <RegionScope regions={regions} selected={showAll ? ALL : selected} onSelect={onSelect} />
+      </CardHeader>
+
+      <CardContent>
+        {/* Desktop: the table. Edge to edge inside the card, so the first and
+            last columns carry the card's own padding. */}
+        <div className="-mx-6 hidden md:block">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="pl-6 text-xs text-muted-foreground">Group</TableHead>
+                <TableHead className="text-xs text-muted-foreground">Area Sales Head</TableHead>
+                <TableHead className="w-[30%] text-xs text-muted-foreground">Approved</TableHead>
+                <TableHead className="pr-6 text-right text-xs text-muted-foreground">
+                  Referrals
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isEmpty ? (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={4} className="py-6 text-center">
+                    {emptyState}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                rows.map((row) => (
+                  <TableRow key={row.code}>
+                    <TableCell className="pl-6">
+                      <div className="text-xs font-medium">{row.name}</div>
+                      {showAll ? (
+                        <div className="text-[10px] text-muted-foreground">{row.regionName}</div>
+                      ) : null}
+                    </TableCell>
+                    <TableCell>
+                      <HeadChip row={row} />
+                    </TableCell>
+                    <TableCell>
+                      <ApprovalBar rate={row.rate} />
+                    </TableCell>
+                    <TableCell className="pr-6 text-right font-medium tabular-nums">
+                      {formatCount(row.total)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Phone: the same rows as a list. Four facts each -- group, head,
+            approval, referrals. */}
+        <div className="-mx-6 divide-y border-y md:hidden">
+          {isEmpty ? (
+            <div className="px-6 py-6 text-center">{emptyState}</div>
+          ) : (
+            rows.map((row) => (
+              <div key={row.code} className="space-y-2 px-6 py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="truncate text-xs font-medium">{row.name}</div>
+                    {showAll ? (
+                      <div className="text-[10px] text-muted-foreground">{row.regionName}</div>
+                    ) : null}
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div className="font-medium tabular-nums">{formatCount(row.total)}</div>
+                    <div className="text-xs text-muted-foreground">referrals</div>
+                  </div>
+                </div>
+                <HeadChip row={row} />
+                <ApprovalBar rate={row.rate} />
+              </div>
+            ))
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * An Area Sales Head: picture, name, user code. A group can have none.
+ *
+ * Sized down with the Group column (Adrian): the name at text-xs, and the
+ * secondary line -- user code here, region under a group -- a step smaller
+ * again at 10px, so the muted text reads as secondary. The picture is sm (24px)
+ * to sit with the smaller text.
+ */
+function HeadChip({ row }) {
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <UserAvatar src={row.headAvatarSrc} name={row.headName} size="sm" />
+      <div className="min-w-0">
+        <div className={cn("truncate text-xs", row.headName ? "font-medium" : "text-muted-foreground")}>
+          {row.headName ?? "No Area Sales Head"}
+        </div>
+        {row.headUserCode ? (
+          <div className="truncate text-[10px] text-muted-foreground">{row.headUserCode}</div>
         ) : null}
-      </span>
+      </div>
+    </div>
+  );
+}
 
-      <LuArrowRight
-        aria-hidden
-        className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+/**
+ * Approved as a share of the group's referrals: shadcn's Progress, and the
+ * figure beside it.
+ *
+ * #00bb7c is Adrian's colour for this bar, set here once and reached through
+ * the indicator's data-slot rather than by editing ui/progress.jsx. A group
+ * with no referrals passes 0, not null -- null would make Base UI draw an
+ * indeterminate bar, which reads as "loading".
+ */
+function ApprovalBar({ rate }) {
+  return (
+    <div className="flex items-center gap-2">
+      <Progress
+        value={rate ?? 0}
+        aria-label="Approved"
+        className="flex-1 [&_[data-slot=progress-indicator]]:bg-[#00bb7c]"
       />
-    </Link>
+      <span className="w-9 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+        {rate != null ? `${rate}%` : "—"}
+      </span>
+    </div>
   );
 }

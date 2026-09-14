@@ -8,7 +8,14 @@ import { apiClient } from '@/lib/apiClient'
  * takes the cookie, which is why it plays no part in the registration screen.
  */
 
-/** GET /lookups/regions -> [{ RegionCode, RegionName }]. Only NCR is seeded. */
+/**
+ * GET /lookups/regions -> [{ RegionCode, RegionName }].
+ *
+ * Three today: NCR 1, Luzon 2, VisMin 3 (checked live 2026-09-14; the old
+ * "only NCR is seeded" note was out of date). ⚠️ Branches exist only in NCR's
+ * groups, so Luzon and VisMin hold no referrals yet and every figure for them
+ * reads zero -- that is data, not a defect.
+ */
 export async function fetchRegions() {
   const { data } = await apiClient.get('/lookups/regions')
   return data.data
@@ -16,6 +23,9 @@ export async function fetchRegions() {
 
 /**
  * GET /lookups/groups -> [{ GroupCode, GroupName }]. All 15.
+ *
+ * Every group is mapped to a region in the database, but this lookup does not
+ * say which -- for that, an Area Sales Head's scope from GET /users?role= does.
  *
  * ⚠️ ONLY GROUPS 1-3 CARRY BRANCHES today. The other twelve are real rows that
  * resolve to a real name and hold nothing, so a branch list can come back

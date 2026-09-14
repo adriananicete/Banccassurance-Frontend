@@ -133,7 +133,41 @@ export function manilaDayYearsAgo(years) {
   return `${Number(year) - years}-${month}-${day}`
 }
 
-const relativeFormatter = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
+/*
+  Month keys -- "2026-04" -- are calendar labels, not instants. They are
+  formatted in UTC on purpose: the Date built from one is midnight UTC on the
+  1st, and formatting it in Manila would still land on the right month, but in
+  a timezone behind UTC it would land on the month before.
+*/
+const monthShortFormatter = new Intl.DateTimeFormat('en-PH', {
+  timeZone: 'UTC',
+  month: 'short',
+})
+
+const monthYearFormatter = new Intl.DateTimeFormat('en-PH', {
+  timeZone: 'UTC',
+  month: 'long',
+  year: 'numeric',
+})
+
+function monthKeyToDate(key) {
+  const match = /^(\d{4})-(\d{2})$/.exec(key ?? '')
+  return match ? new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, 1)) : null
+}
+
+/** "2026-04" -> "Apr". For chart ticks. */
+export function formatMonthShort(key, fallback = '—') {
+  const date = monthKeyToDate(key)
+  return date ? monthShortFormatter.format(date) : fallback
+}
+
+/** "2026-04" -> "April 2026". */
+export function formatMonthYear(key, fallback = '—') {
+  const date = monthKeyToDate(key)
+  return date ? monthYearFormatter.format(date) : fallback
+}
+
+const relativeFormatter =new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
 
 const RELATIVE_UNITS = [
   ['year', 365 * 24 * 60 * 60 * 1000],

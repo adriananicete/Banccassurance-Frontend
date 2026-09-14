@@ -1,8 +1,29 @@
+import { useState } from 'react'
+
 import { NotBuiltYet } from '@/app/NotBuiltYet'
+import { DATE_PRESET } from '@/constants/presets'
 import { ROLES } from '@/constants/roles'
 import { useAuth } from '@/features/auth/AuthContext'
+import { useRegions } from '@/features/lookups/hooks'
+import { useHeadsByRole } from '@/features/users/hooks'
+import { manilaToday } from '@/lib/datetime'
 
 import { DepartmentHeadDashboard } from '../components/DepartmentHeadDashboard'
+import {
+  ALL_REGIONS,
+  allTimeSliderRange,
+  approvedFromByStatus,
+  buildGroups,
+  buildRegions,
+  chartMonths,
+  sumFigures,
+} from '../dashboardData'
+import {
+  useExportReferrals,
+  useReportsDashboard,
+  useReportSummaries,
+  useReportSummary,
+} from '../hooks'
 
 /**
  * One route, nine roles, and the screens are not the same screen.
@@ -12,124 +33,133 @@ import { DepartmentHeadDashboard } from '../components/DepartmentHeadDashboard'
  * the component rather than one component branching nine ways internally.
  * Roles whose dashboard is not designed yet still get the scaffolding, so the
  * route never 404s and it stays obvious which ones are left.
- *
- * ⚠️ THE DATA BELOW IS HARDCODED. Nothing here calls the API yet -- it exists
- * so the design can be built against something that looks real. When
- * GET /reports/dashboard is wired, it replaces PLACEHOLDER and the
- * presentational components do not change.
  */
 export function DashboardPage() {
   const { user } = useAuth()
 
   if (user?.role === ROLES.DEPARTMENT_HEAD) {
-    return <DepartmentHeadDashboard {...PLACEHOLDER} />
+    return <DepartmentHeadDashboardPage />
   }
 
   return (
     <NotBuiltYet
       title="Dashboard"
-      note="One call, fixed shape, no parameters — it is always all time, because one of the two procedures behind it takes no date. The Department Head's view is built; the other seven are not."
-      endpoints={['GET /reports/dashboard']}
+      note="The Department Head's view is built and wired; the other seven are not."
+      endpoints={['GET /reports/dashboard', 'GET /reports/summary']}
     />
   )
 }
 
 /**
- * Stand-in for the response, shaped the way the real one will be read.
+ * The Department Head's dashboard, wired to the API.
  *
- * The three regions are the three rows `banc.regions` actually holds. Each one
- * carries its own `monthly` set for the bar chart, and each set sums exactly to
- * that region's `total` -- 310, 295, 242 -- which themselves sum to 847. Keep it
- * that way when editing: a breakdown that does not add up to the figure beside
- * it is the first thing anyone checks.
+ * The period and the region live HERE, not in the component, because each one
+ * changes which requests are made. Everything else is shaped by
+ * ../dashboardData.js and handed down.
  *
- * The Regional Sales Head names are invented -- and note they do NOT come from
- * GET /reports/dashboard, whose breakdown is grouped by region rather than by
- * person. Wiring them up needs a second source, which is why the component
- * treats `headName` as nullable.
+ * Requests, and why each exists:
+ *   /lookups/regions                          the region list, so a region with no
+ *                                             referrals still shows at zero
+ *   /reports/dashboard                        the all-time total -- only on "All time"
+ *   /reports/summary?groupBy=REGION           every region's figures for the period;
+ *                                             their sum is the tenant for any other period
+ *   /reports/summary?groupBy=MONTH            the chart, for the tenant or the picked region,
+ *                                             over the period (All time is laid out
+ *                                             January to December in dashboardData)
+ *   /reports/summary?groupBy=AREA  x regions  the Groups table, one call per region in view
+ *   /users?role=REGIONAL_SALES_HEAD / AREA_SALES_HEAD   names, codes and photos
  *
- * ⚠️ `monthly` IS THE PART WITH NO SOURCE AT ALL. The region totals are real
- * shapes the API can answer; a split by month is not. `/reports/dashboard` takes
- * no dates, and `/reports/summary` takes a range but groups by
- * REGION / AREA / BRANCH / AO -- never by month. Filling this is a DBA change.
+ * Custom is never requested: it is hidden until there is a date picker.
+ *
+ * Live data on 2026-09-14 is 106 referrals, all NCR, all September -- so Luzon
+ * and VisMin read zero and the chart has one month. That is the data.
  */
-const PLACEHOLDER = {
-  total: 847,
-  /*
-    The outcome half. 96 + 78 + 88 = 262, and 262 of 847 is 31%.
+function DepartmentHeadDashboardPage() {
+  const [preset, setPreset] = useState(DATE_PRESET.ALL_TIME)
+  const [selected, setSelected] = useState(ALL_REGIONS)
+  const isAllTime = preset === DATE_PRESET.ALL_TIME
+  const currentMonth = manilaToday().slice(0, 7)
 
-    Deliberately NOT in volume order: VisMin is the smallest region and the best
-    at closing, NCR is the biggest and middling. That is the whole argument for
-    ranking the panel by conversion -- in volume order the worst performer sits
-    at the bottom where nobody looks.
-  */
-  approved: 262,
-  /** Referrals with no status change in `stalledDays`. 12 + 31 + 6. */
-  stalled: 49,
-  stalledDays: 14,
-  /** Account Officers approved but holding no branches. One tier below the DH. */
-  unassignedOfficers: 3,
-  notifications: [
-    { id: 'n1', text: 'Ana Reyes approved 2 Area Sales Heads', at: '2026-09-11T01:40:00Z' },
-    { id: 'n2', text: 'VisMin passed 240 referrals', at: '2026-09-10T22:05:00Z' },
-    { id: 'n3', text: 'A Regional Sales Head registration is waiting for you', at: '2026-09-10T07:30:00Z' },
-  ],
-  regions: [
-    {
-      code: 'NCR',
-      name: 'NCR',
-      total: 310,
-      approved: 96,
-      stalled: 12,
-      headName: 'Juan Cruz',
-      headUserCode: 'PHL-RSH-00001',
-      // Sums to 310.
-      monthly: [
-        { month: 'January', desktop: 40 },
-        { month: 'February', desktop: 45 },
-        { month: 'March', desktop: 50 },
-        { month: 'April', desktop: 55 },
-        { month: 'May', desktop: 60 },
-        { month: 'June', desktop: 60 },
-      ],
-    },
-    {
-      code: 'LUZ',
-      name: 'Luzon',
-      total: 295,
-      approved: 78,
-      stalled: 31,
-      headName: 'Ana Reyes',
-      headUserCode: 'PHL-RSH-00002',
-      // Sums to 295.
-      monthly: [
-        { month: 'January', desktop: 40 },
-        { month: 'February', desktop: 45 },
-        { month: 'March', desktop: 48 },
-        { month: 'April', desktop: 52 },
-        { month: 'May', desktop: 55 },
-        { month: 'June', desktop: 55 },
-      ],
-    },
-    {
-      code: 'VISMIN',
-      name: 'VisMin',
-      total: 242,
-      approved: 88,
-      stalled: 6,
-      headName: null,
-      headUserCode: null,
-      // Sums to 242.
-      monthly: [
-        { month: 'January', desktop: 30 },
-        { month: 'February', desktop: 35 },
-        { month: 'March', desktop: 40 },
-        { month: 'April', desktop: 42 },
-        { month: 'May', desktop: 45 },
-        { month: 'June', desktop: 50 },
-      ],
-    },
-  ],
-  pendingApprovals: 1,
-  unassignedHeads: 2,
+  const regionsLookup = useRegions()
+  const dashboard = useReportsDashboard({ enabled: isAllTime })
+  const regionSummary = useReportSummary({ groupBy: 'REGION', preset })
+  const regionalHeads = useHeadsByRole(ROLES.REGIONAL_SALES_HEAD)
+  const areaHeads = useHeadsByRole(ROLES.AREA_SALES_HEAD)
+
+  const regions = buildRegions(
+    regionsLookup.data,
+    regionSummary.data?.rows,
+    regionalHeads.data,
+  )
+
+  // A selection that no longer names a region falls back to all of them.
+  const activeCode = regions.some((region) => region.code === selected)
+    ? selected
+    : ALL_REGIONS
+  const isAllRegions = activeCode === ALL_REGIONS
+
+  const monthlySummary = useReportSummary({
+    groupBy: 'MONTH',
+    preset,
+    parentRegionCode: isAllRegions ? undefined : activeCode,
+  })
+
+  const regionCodesInView = isAllRegions ? regions.map((region) => region.code) : [activeCode]
+  const areaSummaries = useReportSummaries(
+    regionCodesInView.map((code) => ({ groupBy: 'AREA', preset, parentRegionCode: code })),
+  )
+
+  const groups = buildGroups(
+    areaSummaries.map((query, index) => ({
+      regionCode: regionCodesInView[index],
+      rows: query.data?.rows ?? [],
+    })),
+    areaHeads.data,
+    regions,
+  )
+
+  // All time reads the API's own total; any other period is the sum of the
+  // regions, because /summary has no total row.
+  const tenant =
+    isAllTime && dashboard.data
+      ? { total: dashboard.data.total, approved: approvedFromByStatus(dashboard.data.byStatus) }
+      : sumFigures(regionSummary.data?.rows)
+
+  // Loading is the FIRST load only -- a query holding previous data is not
+  // loading, it is refreshing in place.
+  const pending = (query) => query.isPending && query.fetchStatus !== 'idle'
+  const firstError = (...queries) => queries.find((query) => query.error)?.error ?? null
+
+  const summaryQueries = [regionsLookup, regionSummary, regionalHeads, ...(isAllTime ? [dashboard] : [])]
+  const summaryLoading = summaryQueries.some(pending)
+  const summaryError = firstError(...summaryQueries)
+
+  const groupQueries = [regionsLookup, areaHeads, ...areaSummaries]
+  const groupsLoading = groupQueries.some(pending)
+  const groupsError = firstError(...groupQueries)
+
+  const exportReferrals = useExportReferrals()
+
+  return (
+    <DepartmentHeadDashboard
+      preset={preset}
+      onPresetChange={setPreset}
+      selected={activeCode}
+      onSelect={setSelected}
+      tenant={tenant}
+      regions={regions}
+      monthly={chartMonths(preset, monthlySummary.data?.rows, currentMonth)}
+      sliderRange={isAllTime ? allTimeSliderRange(currentMonth) : null}
+      groups={groups}
+      summaryLoading={summaryLoading}
+      summaryError={summaryError}
+      chartLoading={summaryLoading || pending(monthlySummary)}
+      chartError={summaryError ?? monthlySummary.error ?? null}
+      groupsLoading={groupsLoading}
+      groupsError={groupsError}
+      onExport={(exportPreset) => exportReferrals.mutate({ preset: exportPreset })}
+      isExporting={exportReferrals.isPending}
+      exportError={exportReferrals.error}
+    />
+  )
 }

@@ -26,6 +26,26 @@ export async function fetchScope() {
 }
 
 /**
+ * GET /users?role= -> every Regional Sales Head or Area Sales Head.
+ *
+ * `role` is REGIONAL_SALES_HEAD or AREA_SALES_HEAD; anything else is a 400.
+ * DEPARTMENT_HEAD and SUPERADMIN only. No paging.
+ *
+ * Each row: { userId, userCode, fullName, photo, approved, scope }.
+ *   Regional Sales Head  scope: { regionCode, regionName } | null
+ *   Area Sales Head      scope: [{ groupCode, groupName, regionCode, regionName }]
+ * Holding nothing is `null` for the first and `[]` for the second. Pending
+ * heads are listed with `approved: false`; deactivated and rejected are not.
+ *
+ * ⚠️ FOR LABELS, NEVER FOR COUNTS. Totals are grouped by geography so a head
+ * changing job does not move a region's history.
+ */
+export async function fetchHeadsByRole(role) {
+  const { data } = await apiClient.get('/users', { params: { role } })
+  return data.data ?? []
+}
+
+/**
  * GET /users/check-email?email= -> { exists }
  *
  * ⚠️ NO `success` KEY, and no `data`. One of the handful of endpoints that
