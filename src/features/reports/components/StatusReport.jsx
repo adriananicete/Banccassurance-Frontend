@@ -213,22 +213,23 @@ export function StatusReport({
                 )}
               </TableBody>
               {!isEmpty ? (
-                // Column totals on the same grey band as the titles.
+                // Column totals on the same grey band as the titles, with more
+                // room top and bottom than a body row (Adrian).
                 <TableFooter className="bg-muted/60">
                   <TableRow className="hover:bg-muted/60">
-                    <TableCell className="pl-6 text-xs font-semibold">Total</TableCell>
+                    <TableCell className="py-4 pl-6 text-xs font-semibold">Total</TableCell>
                     {totals.counts.map((count, index) => (
                       <TableCell
                         key={STATUSES[index].value}
                         className={cn(
-                          "text-right text-xs font-semibold tabular-nums",
+                          "py-4 text-right text-xs font-semibold tabular-nums",
                           index === APPROVED_INDEX && "text-[#00bb7c]",
                         )}
                       >
                         {formatCount(count)}
                       </TableCell>
                     ))}
-                    <TableCell className="pr-6 text-right text-xs font-semibold tabular-nums text-[#155dfc] dark:text-blue-400">
+                    <TableCell className="py-4 pr-6 text-right text-xs font-semibold tabular-nums text-[#155dfc] dark:text-blue-400">
                       {formatCount(totals.total)}
                     </TableCell>
                   </TableRow>
