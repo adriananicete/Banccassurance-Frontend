@@ -513,13 +513,14 @@ function RegionsCard({ regions, total, period, isCustom, selected, onSelect, loa
 
                     {/* The bar is the conversion rate, matching the ranking, so
                         the two can never disagree. The line under it says the
-                        same figure in words. */}
-                    <div aria-hidden className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-primary"
-                        style={{ width: `${rate ?? 0}%` }}
-                      />
-                    </div>
+                        same figure in words. shadcn's Progress in #155dfc,
+                        Adrian's colour for this card; 0 rather than null so
+                        an empty region never draws as indeterminate. */}
+                    <Progress
+                      value={rate ?? 0}
+                      aria-label={`${region.name} approved`}
+                      className="w-full [&_[data-slot=progress-indicator]]:bg-[#155dfc]"
+                    />
 
                     <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
                       <span className="tabular-nums">
