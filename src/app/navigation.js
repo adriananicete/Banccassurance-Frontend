@@ -18,6 +18,7 @@ import {
   AUDIT_ROLES,
   MESSAGING_DENIED_ROLES,
   REFERRAL_CREATOR_ROLES,
+  REFERRAL_LIST_DENIED_ROLES,
   ROLES,
 } from '@/constants/roles'
 import { paths } from '@/routes/paths'
@@ -51,7 +52,9 @@ export const NAV_ITEMS = [
     to: paths.referrals,
     label: 'Referrals',
     Icon: LuList,
-    denied: [ROLES.SUPERADMIN],
+    // Not for the overseers: they read the tenant from the dashboard and
+    // reports, not the list (Adrian, 2026-09-14).
+    denied: REFERRAL_LIST_DENIED_ROLES,
   },
   {
     to: paths.referralNew,
