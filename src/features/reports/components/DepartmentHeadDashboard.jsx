@@ -635,9 +635,9 @@ function GroupsCard({ regions, selected, onSelect, preset, period, isCustom, loa
                 rows.map((row) => (
                   <TableRow key={row.code}>
                     <TableCell className="pl-6">
-                      <div className="font-medium">{row.name}</div>
+                      <div className="text-xs font-medium">{row.name}</div>
                       {showAll ? (
-                        <div className="text-xs text-muted-foreground">{row.regionName}</div>
+                        <div className="text-[10px] text-muted-foreground">{row.regionName}</div>
                       ) : null}
                     </TableCell>
                     <TableCell>
@@ -666,9 +666,9 @@ function GroupsCard({ regions, selected, onSelect, preset, period, isCustom, loa
               <div key={row.code} className="space-y-2 px-6 py-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="truncate font-medium">{row.name}</div>
+                    <div className="truncate text-xs font-medium">{row.name}</div>
                     {showAll ? (
-                      <div className="text-xs text-muted-foreground">{row.regionName}</div>
+                      <div className="text-[10px] text-muted-foreground">{row.regionName}</div>
                     ) : null}
                   </div>
                   <div className="shrink-0 text-right">
@@ -687,17 +687,23 @@ function GroupsCard({ regions, selected, onSelect, preset, period, isCustom, loa
   );
 }
 
-/** An Area Sales Head: picture, name, user code. A group can have none. */
+/**
+ * An Area Sales Head: picture, name, user code. A group can have none.
+ *
+ * Sized down with the Group column (Adrian): the name at text-xs, and the
+ * secondary line -- user code here, region under a group -- a step smaller
+ * again at 10px, so the muted text reads as secondary.
+ */
 function HeadChip({ row }) {
   return (
     <div className="flex min-w-0 items-center gap-2">
       <UserAvatar src={row.headAvatarSrc} name={row.headName} size="md" />
       <div className="min-w-0">
-        <div className={cn("truncate text-sm", row.headName ? "font-medium" : "text-muted-foreground")}>
+        <div className={cn("truncate text-xs", row.headName ? "font-medium" : "text-muted-foreground")}>
           {row.headName ?? "No Area Sales Head"}
         </div>
         {row.headUserCode ? (
-          <div className="truncate text-xs text-muted-foreground">{row.headUserCode}</div>
+          <div className="truncate text-[10px] text-muted-foreground">{row.headUserCode}</div>
         ) : null}
       </div>
     </div>
