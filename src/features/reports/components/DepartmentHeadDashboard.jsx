@@ -437,7 +437,9 @@ function RegionsCard({ regions, total, period, isCustom, selected, onSelect, loa
     // The card itself carries the design: a faint blue wash from the top that
     // fades into the card colour, and a blue-tinted border, both keyed to the
     // title icon. The rows inside stay plain.
-    <Card className="h-full border-blue-100 bg-linear-to-b from-blue-50/80 via-card to-card dark:border-blue-500/20 dark:from-blue-500/10">
+    // Tighter than the Card default (py-6, gap-6): the header was too airy for a
+    // panel this short, per Adrian. The rows keep their own px-6.
+    <Card className="h-full gap-3 py-4 border-blue-100 bg-linear-to-b from-blue-50/80 via-card to-card dark:border-blue-500/20 dark:from-blue-500/10">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           {/* Decorative. Blue to match the referrals series in the chart beside
@@ -594,7 +596,10 @@ function GroupsCard({ regions, selected, onSelect, preset, period, isCustom, loa
 
   return (
     <Card>
-      <CardHeader className="gap-3">
+      {/* Title on the left, tabs on the right, level with each other from md
+          (space-between, per Adrian). Stacked on a phone, where the tabs take
+          the full width. */}
+      <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1.5">
           <CardTitle>Groups</CardTitle>
           <CardDescription>
