@@ -13,7 +13,6 @@ import {
 import { formatWeekdayDate } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 import { paths } from "@/routes/paths";
-import logo from "../../assets/PhilLife-Color-resize.png";
 import { IoNotificationsOutline } from "react-icons/io5";
 import { LuMoon } from "react-icons/lu";
 import { LuMessageSquareMore } from "react-icons/lu";
@@ -38,6 +37,8 @@ import { IoIosArrowForward } from "react-icons/io";
  *   roleLabel      "Branch Staff", "Account Officer", …
  *   userCode       "USR-STF-00001"
  *   avatarSrc      An absolute URL, or null. Fall back to initials.
+ *   logoSrc / logoAlt  The company logo for the header -- Landbank or PhilLife,
+ *                  chosen by AppLayout from the session's tenant. Null shows none.
  *   scopeWarning   A string, or null. Shown as a banner across every screen --
  *                  see the note in AppLayout for why it lives at this level.
  *   isSidebarOpen  Mobile only. The sidebar is always visible from lg up.
@@ -51,6 +52,8 @@ export function AppShell({
   roleLabel,
   userCode,
   avatarSrc,
+  logoSrc,
+  logoAlt,
   scopeWarning,
   isSidebarOpen,
   onToggleSidebar,
@@ -174,11 +177,17 @@ export function AppShell({
       </aside>
 
       <div className="lg:pl-64">
-        <header className="sticky top-0 z-20 flex h-16 justify-between items-center gap-3 border-b border-border px-4">
+        {/* Opaque, so content scrolling under the sticky header is covered
+            rather than showing through it. */}
+        <header className="sticky top-0 z-20 flex h-16 justify-between items-center gap-3 border-b border-border bg-background px-4">
           <div className="h-full flex justify-start items-center gap-2">
-            <div className="bg-neutral-100 border py-1 rounded-sm flex justify-start items-center">
-              <img src={logo} width={68} alt="" />
-            </div>
+            {/* The signed-in user's company: Landbank or PhilLife. Height-bound,
+                because one logo is wide and the other square. */}
+            {logoSrc ? (
+              <div className="bg-neutral-100 border py-1 px-1 rounded-sm flex justify-start items-center">
+                <img src={logoSrc} alt={logoAlt ?? ""} className="h-6 w-auto" />
+              </div>
+            ) : null}
             <h1 className="font-bold">Banccassurance Referral System</h1>
           </div>
 
