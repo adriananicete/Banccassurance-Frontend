@@ -59,10 +59,10 @@ import {
 /**
  * The page title and its one sentence.
  */
-export function DashboardTitle({ subtitle }) {
+export function DashboardTitle({ title = "Dashboard", subtitle }) {
   return (
     <div>
-      <h1 className="text-xl font-semibold md:text-2xl">Dashboard</h1>
+      <h1 className="text-xl font-semibold md:text-2xl">{title}</h1>
       <p className="text-sm text-muted-foreground">{subtitle}</p>
     </div>
   );

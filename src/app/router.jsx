@@ -15,6 +15,7 @@ import { AuthLayoutRoute } from '@/features/auth/pages/AuthLayoutRoute'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { VerifyOtpPage } from '@/features/auth/pages/VerifyOtpPage'
 import { DashboardPage } from '@/features/reports/pages/DashboardPage'
+import { ReportsPage } from '@/features/reports/pages/ReportsPage'
 import { ChooseTenantPage } from '@/features/users/pages/ChooseTenantPage'
 import { RegisterPage } from '@/features/users/pages/RegisterPage'
 import { GuestOnly } from '@/routes/GuestOnly'
@@ -97,13 +98,8 @@ export const router = createBrowserRouter([
               },
               {
                 path: paths.reports,
-                element: (
-                  <NotBuiltYet
-                    title="Reports"
-                    note="One call per drill-down expansion. Landbank walks AREA → BRANCH; PhilLife walks REGION → AREA → AO."
-                    endpoints={['GET /reports/summary', 'GET /reports/export']}
-                  />
-                ),
+                // Picks the tenant head's drill-down; other roles get the scaffold.
+                element: <ReportsPage />,
               },
             ],
           },
