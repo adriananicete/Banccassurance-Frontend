@@ -189,7 +189,7 @@ export function StatusReport({
                             <ChevronRight aria-hidden className="size-3.5 text-muted-foreground" />
                           ) : null}
                         </div>
-                        <div className="text-[10px] text-muted-foreground tabular-nums">
+                        <div className="text-[10px] font-medium text-[#00bb7c] tabular-nums">
                           {conversionRate(row.approved, row.total) ?? 0}% approved
                         </div>
                       </TableCell>
@@ -258,7 +258,7 @@ export function StatusReport({
                         {row.name}
                         {canDrill ? <ChevronRight aria-hidden className="size-3.5 text-muted-foreground" /> : null}
                       </div>
-                      <div className="text-[10px] text-muted-foreground tabular-nums">
+                      <div className="text-[10px] font-medium text-[#00bb7c] tabular-nums">
                         {conversionRate(row.approved, row.total) ?? 0}% approved
                       </div>
                     </div>
