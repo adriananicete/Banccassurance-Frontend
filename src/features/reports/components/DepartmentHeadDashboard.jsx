@@ -505,45 +505,17 @@ function AttentionCard({
 }
 
 /**
- * One colour per region, so a region reads as the same thing in the share bar,
- * its dot and its progress bar. Assigned by the region's position in `regions`,
- * NOT by rank -- ranks move with the period, and a region changing colour when
- * the dropdown changes would read as a different region.
- *
- * Mid-tone and muted on purpose, each with a dark pair. Indigo, cyan and amber
- * sit apart from the chart's blue and emerald, which mean referrals and
- * approved. Full class strings, so Tailwind can see them.
+ * One hover tint per region -- the only per-region colour on the card, and
+ * Adrian's pick. Assigned by the region's position in `regions`, NOT by rank,
+ * so a row keeps its tint when the period reorders the list. Faint, with a
+ * dark pair. Full class strings, so Tailwind can see them.
  */
-const REGION_ACCENTS = [
-  {
-    dot: "bg-indigo-500 dark:bg-indigo-400",
-    bar: "bg-indigo-500 dark:bg-indigo-400",
-    soft: "bg-indigo-50/70 dark:bg-indigo-500/10",
-    hover: "hover:bg-indigo-50/50 dark:hover:bg-indigo-500/5",
-  },
-  {
-    dot: "bg-cyan-500 dark:bg-cyan-400",
-    bar: "bg-cyan-500 dark:bg-cyan-400",
-    soft: "bg-cyan-50/70 dark:bg-cyan-500/10",
-    hover: "hover:bg-cyan-50/50 dark:hover:bg-cyan-500/5",
-  },
-  {
-    dot: "bg-amber-500 dark:bg-amber-400",
-    bar: "bg-amber-500 dark:bg-amber-400",
-    soft: "bg-amber-50/70 dark:bg-amber-500/10",
-    hover: "hover:bg-amber-50/50 dark:hover:bg-amber-500/5",
-  },
-  {
-    dot: "bg-rose-500 dark:bg-rose-400",
-    bar: "bg-rose-500 dark:bg-rose-400",
-    soft: "bg-rose-50/70 dark:bg-rose-500/10",
-    hover: "hover:bg-rose-50/50 dark:hover:bg-rose-500/5",
-  },
+const REGION_HOVERS = [
+  "hover:bg-indigo-50/70 dark:hover:bg-indigo-500/10",
+  "hover:bg-cyan-50/70 dark:hover:bg-cyan-500/10",
+  "hover:bg-amber-50/70 dark:hover:bg-amber-500/10",
+  "hover:bg-rose-50/70 dark:hover:bg-rose-500/10",
 ];
-
-function accentAt(index) {
-  return REGION_ACCENTS[index % REGION_ACCENTS.length];
-}
 
 /**
  * The regions, ranked by conversion -- NOT by volume. In volume order the
@@ -554,17 +526,20 @@ function accentAt(index) {
  * the picked row stays highlighted so the two controls cannot disagree.
  */
 function RegionsCard({ regions, total, period, isCustom, selected, onSelect, loading, error }) {
-  // Colour follows the region's place in `regions`; order follows conversion.
-  const withAccent = regions.map((region, index) => ({ ...region, accent: accentAt(index) }));
-  // Copy first: `sort` mutates.
-  const ranked = [...withAccent].sort(
-    (a, b) =>
-      (conversionRate(b.approved, b.total) ?? 0) - (conversionRate(a.approved, a.total) ?? 0),
-  );
-  const hasFigures = !loading && !error && Boolean(total);
+  // Tint follows the region's place in `regions`; order follows conversion.
+  // Copy before sorting: `sort` mutates.
+  const ranked = regions
+    .map((region, index) => ({ ...region, hover: REGION_HOVERS[index % REGION_HOVERS.length] }))
+    .sort(
+      (a, b) =>
+        (conversionRate(b.approved, b.total) ?? 0) - (conversionRate(a.approved, a.total) ?? 0),
+    );
 
   return (
-    <Card className="h-full">
+    // The card itself carries the design: a faint blue wash from the top that
+    // fades into the card colour, and a blue-tinted border, both keyed to the
+    // title icon. The rows inside stay plain.
+    <Card className="h-full border-blue-100 bg-linear-to-b from-blue-50/80 via-card to-card dark:border-blue-500/20 dark:from-blue-500/10">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           {/* Decorative. Blue to match the referrals series in the chart beside
@@ -578,31 +553,9 @@ function RegionsCard({ regions, total, period, isCustom, selected, onSelect, loa
           Regions
         </CardTitle>
         <CardDescription>Ranked by conversion · {period}</CardDescription>
-
-        {/* Share of PhilLife's referrals, one segment per region, in the order
-            the regions come in. The whole panel's colour key at a glance. */}
-        {hasFigures ? (
-          <div
-            role="img"
-            aria-label={withAccent
-              .map((region) => `${region.name} ${Math.round((region.total / total) * 100)}%`)
-              .join(", ")}
-            className="col-span-full mt-2 flex h-2 w-full gap-0.5 overflow-hidden rounded-full"
-          >
-            {withAccent.map((region) =>
-              region.total > 0 ? (
-                <div
-                  key={region.code}
-                  className={cn("h-full first:rounded-l-full last:rounded-r-full", region.accent.bar)}
-                  style={{ width: `${(region.total / total) * 100}%` }}
-                />
-              ) : null,
-            )}
-          </div>
-        ) : null}
       </CardHeader>
       <CardContent className="flex min-h-0 flex-1 flex-col overflow-auto">
-        {!hasFigures ? (
+        {loading || error || !total ? (
           // Not three rows of zeroes. A column of zeroes reads as a broken
           // query rather than as "nothing yet".
           <DataPlaceholder
@@ -617,7 +570,7 @@ function RegionsCard({ regions, total, period, isCustom, selected, onSelect, loa
           />
         ) : (
           <ul className="-mx-6 divide-y border-y">
-            {ranked.map((region, index) => {
+            {ranked.map((region) => {
               const rate = conversionRate(region.approved, region.total);
               const share = Math.round((region.total / total) * 100);
               const isSelected = selected === region.code;
@@ -629,71 +582,52 @@ function RegionsCard({ regions, total, period, isCustom, selected, onSelect, loa
                     onClick={() => onSelect(isSelected ? ALL : region.code)}
                     aria-pressed={isSelected}
                     className={cn(
-                      "flex w-full cursor-pointer items-start gap-3 px-6 py-3 text-left transition-colors",
-                      isSelected ? region.accent.soft : region.accent.hover,
+                      "flex w-full cursor-pointer flex-col gap-2 px-6 py-3 text-left transition-colors",
+                      isSelected ? "bg-muted" : region.hover,
                     )}
                   >
-                    {/* Rank. Neutral: the order is the information, and a
-                        coloured first place would read as a prize. */}
-                    <span className="mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground tabular-nums">
-                      {index + 1}
-                    </span>
-
-                    <div className="flex min-w-0 flex-1 flex-col gap-2">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 font-medium">
-                            <span aria-hidden className={cn("size-2 shrink-0 rounded-full", region.accent.dot)} />
-                            {region.name}
-                          </div>
-                          {/* Null is ordinary, and the gap is worth reading --
-                              the avatar shows an empty-seat icon rather than
-                              disappearing. */}
-                          <div className="mt-1 flex min-w-0 items-center gap-1.5">
-                            <UserAvatar
-                              src={region.headAvatarSrc}
-                              name={region.headName}
-                              size="sm"
-                            />
-                            <span className="truncate text-xs text-muted-foreground">
-                              {region.headName
-                                ? `${region.headName} · ${region.headUserCode}`
-                                : "No Regional Sales Head assigned"}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="shrink-0 text-right">
-                          <div className="text-base font-semibold tabular-nums">
-                            {region.total.toLocaleString("en-PH")}
-                          </div>
-                          <div className="text-xs text-muted-foreground">referrals</div>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="font-medium">{region.name}</div>
+                        {/* Null is ordinary, and the gap is worth reading --
+                            the avatar shows an empty-seat icon rather than
+                            disappearing. */}
+                        <div className="mt-1 flex min-w-0 items-center gap-1.5">
+                          <UserAvatar
+                            src={region.headAvatarSrc}
+                            name={region.headName}
+                            size="sm"
+                          />
+                          <span className="truncate text-xs text-muted-foreground">
+                            {region.headName
+                              ? `${region.headName} · ${region.headUserCode}`
+                              : "No Regional Sales Head assigned"}
+                          </span>
                         </div>
                       </div>
-
-                      {/* The bar is the conversion rate, matching the ranking, so
-                          the two can never disagree. The line under it says the
-                          same figure in words. */}
-                      <div aria-hidden className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                        <div
-                          className={cn("h-full rounded-full transition-[width] duration-500", region.accent.bar)}
-                          style={{ width: `${rate ?? 0}%` }}
-                        />
+                      <div className="shrink-0 text-right">
+                        <div className="font-medium tabular-nums">
+                          {region.total.toLocaleString("en-PH")}
+                        </div>
+                        <div className="text-xs text-muted-foreground">referrals</div>
                       </div>
+                    </div>
 
-                      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                        <span className="tabular-nums">
-                          {rate != null ? (
-                            <>
-                              <span className="font-semibold text-foreground">{rate}%</span> approved
-                            </>
-                          ) : (
-                            "No referrals in this period"
-                          )}
-                        </span>
-                        <span className="tabular-nums">
-                          <span className="font-semibold text-foreground">{share}%</span> of PhilLife
-                        </span>
-                      </div>
+                    {/* The bar is the conversion rate, matching the ranking, so
+                        the two can never disagree. The line under it says the
+                        same figure in words. */}
+                    <div aria-hidden className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-primary"
+                        style={{ width: `${rate ?? 0}%` }}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                      <span className="tabular-nums">
+                        {rate != null ? `${rate}% approved` : "No referrals in this period"}
+                      </span>
+                      <span className="tabular-nums">{share}% of PhilLife</span>
                     </div>
                   </button>
                 </li>
