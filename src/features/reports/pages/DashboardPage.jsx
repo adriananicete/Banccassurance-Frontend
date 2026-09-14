@@ -100,6 +100,9 @@ const PLACEHOLDER = {
       stalled: 12,
       headName: 'Juan Cruz',
       headUserCode: 'PHL-RSH-00001',
+      // No real uploads to point at, so every head shows initials for now.
+      // Wired, this is avatarUrl(photo) from lib/apiClient.js.
+      headAvatarSrc: null,
       monthly: [
         { month: '2026-04', referrals: 40, approved: 12 },
         { month: '2026-05', referrals: 45, approved: 14 },
@@ -117,6 +120,7 @@ const PLACEHOLDER = {
       stalled: 31,
       headName: 'Ana Reyes',
       headUserCode: 'PHL-RSH-00002',
+      headAvatarSrc: null,
       monthly: [
         { month: '2026-04', referrals: 40, approved: 10 },
         { month: '2026-05', referrals: 45, approved: 11 },
@@ -134,6 +138,7 @@ const PLACEHOLDER = {
       stalled: 6,
       headName: null,
       headUserCode: null,
+      headAvatarSrc: null,
       monthly: [
         { month: '2026-04', referrals: 30, approved: 11 },
         { month: '2026-05', referrals: 35, approved: 12 },

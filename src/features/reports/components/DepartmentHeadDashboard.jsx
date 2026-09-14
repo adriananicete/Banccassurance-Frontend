@@ -29,7 +29,9 @@
  *   monthly      [{ month: "2026-04", referrals, approved }] for the whole
  *                tenant. ⚠️ NO SOURCE IN THE API YET -- see DashboardPage.
  *   regions      [{ code, name, total, approved, stalled, headName,
- *                headUserCode, monthly }]. Three today: NCR, Luzon, VisMin.
+ *                headUserCode, headAvatarSrc, monthly }]. Three today: NCR,
+ *                Luzon, VisMin. `headAvatarSrc` is an absolute URL or null --
+ *                the container builds it with `avatarUrl(photo)`.
  *                Each carries its own figures and its own `monthly`, so picking
  *                a region re-scopes the tiles and the chart without a request.
  *                ⚠️ `headName` and `headUserCode` MAY BE NULL. Totals are
@@ -63,6 +65,7 @@ import { Link } from "react-router";
 import { ChartAreaGradient } from "@/components/charts/ChartAreaGradient";
 import { DataPlaceholder } from "@/components/DataPlaceholder";
 import { StatTile } from "@/components/StatTile";
+import { UserAvatar } from "@/components/UserAvatar";
 import {
   Card,
   CardContent,
@@ -558,11 +561,20 @@ function RegionsCard({ regions, total, period, isCustom, selected, onSelect, loa
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="font-medium">{region.name}</div>
-                        {/* Null is ordinary, and the gap is worth reading. */}
-                        <div className="truncate text-xs text-muted-foreground">
-                          {region.headName
-                            ? `${region.headName} · ${region.headUserCode}`
-                            : "No Regional Sales Head assigned"}
+                        {/* Null is ordinary, and the gap is worth reading --
+                            the avatar shows an empty-seat icon rather than
+                            disappearing. */}
+                        <div className="mt-1 flex min-w-0 items-center gap-1.5">
+                          <UserAvatar
+                            src={region.headAvatarSrc}
+                            name={region.headName}
+                            size="sm"
+                          />
+                          <span className="truncate text-xs text-muted-foreground">
+                            {region.headName
+                              ? `${region.headName} · ${region.headUserCode}`
+                              : "No Regional Sales Head assigned"}
+                          </span>
                         </div>
                       </div>
                       <div className="shrink-0 text-right">
