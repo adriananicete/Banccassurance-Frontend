@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { UserAvatar } from "@/components/UserAvatar";
 import { formatWeekdayDate } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 import { paths } from "@/routes/paths";
@@ -77,20 +78,24 @@ export function AppShell({
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-sidebar-border bg-sidebar transition-transform duration-200",
+          "fixed inset-y-0 left-0 z-40 flex w-56 flex-col border-r border-sidebar-border bg-sidebar transition-transform duration-200",
           "lg:translate-x-0",
           isSidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
+        {/* The signed-in account: its photo, name and role. The name is cached
+            from login and a fresh browser may not have it yet while the session
+            is valid, so it falls back to the user code; the photo falls back to
+            initials. */}
         <div className="flex h-16 shrink-0 items-center justify-start gap-3 border-b border-sidebar-border px-4">
-          <div className="bg-neutral-100 border w-[38px] h-[38px] rounded-full flex justify-start items-center">
-            <img src="" width={68} alt="" />
-          </div>
+          <UserAvatar src={avatarSrc} name={displayName ?? userCode} size="lg" />
 
-          <div className="h-full flex flex-col justify-center items-start">
-            <span className="text-xs font-semibold">Jimmy Santos</span>
-            <span className="text-[11px] text-neutral-500 leading-4">
-              Department Head
+          <div className="min-w-0 flex-1 h-full flex flex-col justify-center items-start">
+            <span className="w-full truncate text-xs font-semibold" title={displayName ?? userCode}>
+              {displayName ?? userCode}
+            </span>
+            <span className="w-full truncate text-[11px] text-neutral-500 leading-4">
+              {roleLabel}
             </span>
           </div>
 
@@ -176,7 +181,7 @@ export function AppShell({
         </div>
       </aside>
 
-      <div className="lg:pl-64">
+      <div className="lg:pl-56">
         {/* Opaque, so content scrolling under the sticky header is covered
             rather than showing through it. */}
         <header className="sticky top-0 z-20 flex h-16 justify-between items-center gap-3 border-b border-border bg-background px-4">
@@ -278,40 +283,5 @@ function HeaderIconButton({ Icon, label, to, onClick }) {
     >
       <Icon aria-hidden />
     </button>
-  );
-}
-
-function Avatar({ src, name }) {
-  if (src) {
-    return (
-      <img
-        src={src}
-        alt=""
-        className="size-9 shrink-0 rounded-full object-cover"
-        // The stored filename's extension is not a reliable content type, and
-        // an avatar that 404s should not leave a broken-image icon in the
-        // header. Drop to the initials instead.
-        onError={(event) => {
-          event.currentTarget.style.display = "none";
-        }}
-      />
-    );
-  }
-
-  const initials = String(name ?? "")
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
-
-  return (
-    <span
-      aria-hidden
-      className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground"
-    >
-      {initials || "—"}
-    </span>
   );
 }
