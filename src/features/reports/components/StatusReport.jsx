@@ -49,8 +49,23 @@ import { conversionRate, formatCount, presetLabel } from "../dashboardFormat";
 import { reportTotals } from "../reportData";
 import { DashboardTitle, ExportControl } from "./DashboardParts";
 
-/** The approved column, highlighted in the approved green (Adrian's colour). */
-const APPROVED_INDEX = STATUSES.findIndex((status) => status.value === "Approved");
+/**
+ * The status columns that carry a colour (Adrian, 2026-09-14). Keyed by status
+ * value; each class has a dark-mode pair. Applied to the column title, to a
+ * non-zero count, and to the footer total.
+ *   Approved  green #00bb7c -- the approved colour used everywhere
+ *   Declined  red
+ *   Deferred  dark yellow
+ */
+const STATUS_TEXT = {
+  Approved: "text-[#00bb7c]",
+  Declined: "text-red-600 dark:text-red-400",
+  Deferred: "text-yellow-600 dark:text-yellow-500",
+};
+
+function statusText(index) {
+  return STATUS_TEXT[STATUSES[index].value] ?? null;
+}
 
 export function StatusReport({
   tenantName,
@@ -157,7 +172,7 @@ export function StatusReport({
                       key={status.value}
                       className={cn(
                         "h-9 text-right text-xs font-medium text-muted-foreground",
-                        index === APPROVED_INDEX && "text-[#00bb7c]",
+                        statusText(index),
                       )}
                     >
                       {status.label}
@@ -199,7 +214,7 @@ export function StatusReport({
                           className={cn(
                             "text-right text-xs tabular-nums",
                             count === 0 && "text-muted-foreground",
-                            index === APPROVED_INDEX && count > 0 && "font-medium text-[#00bb7c]",
+                            count > 0 && statusText(index) && ["font-medium", statusText(index)],
                           )}
                         >
                           {formatCount(count)}
@@ -223,7 +238,7 @@ export function StatusReport({
                         key={STATUSES[index].value}
                         className={cn(
                           "py-4 text-right text-xs font-semibold tabular-nums",
-                          index === APPROVED_INDEX && "text-[#00bb7c]",
+                          statusText(index),
                         )}
                       >
                         {formatCount(count)}
@@ -276,7 +291,7 @@ export function StatusReport({
                         <dd
                           className={cn(
                             "text-xs tabular-nums",
-                            index === APPROVED_INDEX && row.counts[index] > 0 && "font-medium text-[#00bb7c]",
+                            row.counts[index] > 0 && statusText(index) && ["font-medium", statusText(index)],
                           )}
                         >
                           {formatCount(row.counts[index])}
