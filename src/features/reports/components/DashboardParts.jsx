@@ -308,21 +308,18 @@ export function PlacesCard({
                     )}
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="font-medium">{item.name}</div>
-                        <div className="mt-1 flex min-w-0 items-center gap-1.5">
-                          <UserAvatar src={item.headAvatarSrc} name={item.headName} size="sm" />
-                          <span className="truncate text-xs text-muted-foreground">
-                            {item.headName ? `${item.headName} · ${item.headUserCode}` : noHeadLabel}
-                          </span>
-                        </div>
+                      {/* Same text as the table below: name text-xs, the head
+                          as the table's HeadChip (Adrian, 2026-09-15). */}
+                      <div className="min-w-0 space-y-1.5">
+                        <div className="text-xs font-medium">{item.name}</div>
+                        <HeadChip row={item} noHeadLabel={noHeadLabel} />
                       </div>
                       <div className="shrink-0 text-right">
                         {/* Blue for referrals; lighter in dark mode. */}
-                        <div className="font-medium tabular-nums text-[#155dfc] dark:text-blue-400">
+                        <div className="text-sm font-medium tabular-nums text-[#155dfc] dark:text-blue-400">
                           {formatCount(item.total)}
                         </div>
-                        <div className="text-xs text-muted-foreground">referrals</div>
+                        <div className="text-[10px] text-muted-foreground">referrals</div>
                       </div>
                     </div>
 
@@ -334,7 +331,7 @@ export function PlacesCard({
                       className="w-full [&_[data-slot=progress-indicator]]:bg-[#00bb7c]"
                     />
 
-                    <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <div className="flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
                       <span className="tabular-nums">
                         {rate != null ? `${rate}% approved` : "No referrals in this period"}
                       </span>
