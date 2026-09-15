@@ -18,6 +18,16 @@ export const REPORT_LEVELS = {
     { groupBy: 'AREA', label: 'Group', plural: 'Groups' },
     { groupBy: 'BRANCH', label: 'Branch', plural: 'Branches', parentParam: 'parentGroupCode' },
   ],
+  /**
+   * A Regional Sales Head enters the PhilLife tree at their own region
+   * (BusinessLogic §10): their groups, then each group's Account Officers.
+   * The summary is scoped to their groups by the session, so the top level
+   * takes no parent.
+   */
+  PhilLifeRegion: [
+    { groupBy: 'AREA', label: 'Group', plural: 'Groups' },
+    { groupBy: 'AO', label: 'Account Officer', plural: 'Account Officers', parentParam: 'parentGroupCode' },
+  ],
 }
 
 /**

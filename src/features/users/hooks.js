@@ -66,9 +66,14 @@ export function useApprovalAction() {
 
   return useMutation({
     mutationFn: actOnApproval,
-    // ['users', 'approvals'] -- the prefix of every list and every count.
+    // ['users', 'approvals'] -- every list and every count -- and the role
+    // directories, so a newly approved head shows up where people are listed
+    // (the Regional Sales Head's "Need groups", Assignments).
     onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: queryKeys.users.approvals().slice(0, 2) }),
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.users.approvals().slice(0, 2) }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.users.byRole('').slice(0, 2) }),
+      ]),
   })
 }
 

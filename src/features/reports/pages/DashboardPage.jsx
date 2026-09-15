@@ -9,6 +9,7 @@ import { useHeadsByRole } from '@/features/users/hooks'
 import { manilaToday } from '@/lib/datetime'
 
 import { DepartmentHeadDashboard } from '../components/DepartmentHeadDashboard'
+import { RegionalSalesHeadDashboardPage } from './RegionalSalesHeadDashboardPage'
 import { SectorHeadDashboardPage } from './SectorHeadDashboardPage'
 import {
   ALL_REGIONS,
@@ -46,10 +47,14 @@ export function DashboardPage() {
     return <SectorHeadDashboardPage />
   }
 
+  if (user?.role === ROLES.REGIONAL_SALES_HEAD) {
+    return <RegionalSalesHeadDashboardPage />
+  }
+
   return (
     <NotBuiltYet
       title="Dashboard"
-      note="The Department Head's and Sector Head's views are built and wired; the rest are not."
+      note="The Department Head's, Sector Head's and Regional Sales Head's views are built and wired; the rest are not."
       endpoints={['GET /reports/dashboard', 'GET /reports/summary']}
     />
   )

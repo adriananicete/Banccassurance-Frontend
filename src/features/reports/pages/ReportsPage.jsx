@@ -25,11 +25,16 @@ export function ReportsPage() {
   if (user?.role === ROLES.SECTOR_HEAD) {
     return <TenantExport tenantName="Landbank" groupBy="AREA" placeLabel="group" />
   }
+  if (user?.role === ROLES.REGIONAL_SALES_HEAD) {
+    // Scoped to their region's groups by the session; "Top group" among them.
+    const region = (user?.scopes ?? []).find((scope) => scope.level === 'GROUP')?.regionName
+    return <TenantExport tenantName={region ?? 'your region'} groupBy="AREA" placeLabel="group" />
+  }
 
   return (
     <NotBuiltYet
       title="Reports"
-      note="Built for the Department Head and Sector Head; the other roles are not yet."
+      note="Built for the Department Head, Sector Head and Regional Sales Head; the other roles are not yet."
       endpoints={['GET /reports/summary', 'GET /reports/export', 'GET /referrals']}
     />
   )

@@ -25,6 +25,17 @@ export function ReferralsPage() {
 
   if (user?.role === ROLES.DEPARTMENT_HEAD) return <TenantReport tenantName="PhilLife" />
   if (user?.role === ROLES.SECTOR_HEAD) return <TenantReport tenantName="Landbank" />
+  if (user?.role === ROLES.REGIONAL_SALES_HEAD) {
+    // Their region's groups, then each group's Account Officers (2026-09-15).
+    const groups = (user?.scopes ?? []).filter((scope) => scope.level === 'GROUP')
+    return (
+      <TenantReport
+        tenantName={groups[0]?.regionName ?? 'your region'}
+        levelsKey="PhilLifeRegion"
+        topGroups={groups.map((group) => ({ code: group.groupCode ?? group.code, name: group.groupName ?? group.name }))}
+      />
+    )
+  }
 
   return (
     <NotBuiltYet
@@ -47,8 +58,8 @@ export function ReferralsPage() {
  * A region's groups and a group's Account Officers have no lookup, so those
  * tables are the summary rows only.
  */
-function TenantReport({ tenantName }) {
-  const levels = REPORT_LEVELS[tenantName]
+function TenantReport({ tenantName, levelsKey = tenantName, topGroups = null }) {
+  const levels = REPORT_LEVELS[levelsKey]
   const [preset, setPreset] = useState(DATE_PRESET.ALL_TIME)
   const [path, setPath] = useState([])
 
@@ -63,7 +74,7 @@ function TenantReport({ tenantName }) {
   })
 
   const regionsLookup = useRegions({ enabled: level.groupBy === 'REGION' })
-  const groupsLookup = useGroups({ enabled: tenantName === 'Landbank' && level.groupBy === 'AREA' })
+  const groupsLookup = useGroups({ enabled: levelsKey === 'Landbank' && level.groupBy === 'AREA' })
   const branchesLookup = useBranches(level.groupBy === 'BRANCH' ? parent?.code : null)
 
   let lookup = null
@@ -71,7 +82,10 @@ function TenantReport({ tenantName }) {
   if (level.groupBy === 'REGION') {
     lookupQuery = regionsLookup
     lookup = regionsLookup.data?.map((r) => ({ code: r.RegionCode, name: r.RegionName }))
-  } else if (tenantName === 'Landbank' && level.groupBy === 'AREA') {
+  } else if (topGroups && level.groupBy === 'AREA' && path.length === 0) {
+    // A Regional Sales Head's own groups, from the session -- every one, at 0 when empty.
+    lookup = topGroups
+  } else if (levelsKey === 'Landbank' && level.groupBy === 'AREA') {
     lookupQuery = groupsLookup
     lookup = groupsLookup.data?.map((g) => ({ code: g.GroupCode, name: g.GroupName }))
   } else if (level.groupBy === 'BRANCH') {

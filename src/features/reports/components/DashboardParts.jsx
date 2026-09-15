@@ -384,6 +384,8 @@ export function PlacesCard({
  * component, two renderings (pattern §6): a table from md, a card list below.
  *
  *   rows         [{ code, name, parentName, total, approved, headName, headUserCode, headAvatarSrc }]
+ *   headLabel    The head column's title. Leave it out for a table with no head --
+ *                the Regional Sales Head's Account Officers (2026-09-15).
  *   showParent   Show `parentName` under the place's name (region or group).
  *   tabs         The region buttons, placed opposite the title.
  *   pageSize     Optional. Pages the rows with shadcn's Pagination. The parent
@@ -456,7 +458,9 @@ export function PlacesTable({
                 <TableHead className="h-9 pl-6 text-xs font-medium text-muted-foreground">
                   {placeLabel}
                 </TableHead>
-                <TableHead className="h-9 text-xs font-medium text-muted-foreground">{headLabel}</TableHead>
+                {headLabel ? (
+                  <TableHead className="h-9 text-xs font-medium text-muted-foreground">{headLabel}</TableHead>
+                ) : null}
                 <TableHead className="h-9 w-[30%] text-xs font-medium text-muted-foreground">
                   Approved
                 </TableHead>
@@ -468,7 +472,7 @@ export function PlacesTable({
             <TableBody>
               {isEmpty ? (
                 <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={4} className="py-6 text-center">
+                  <TableCell colSpan={headLabel ? 4 : 3} className="py-6 text-center">
                     {emptyState}
                   </TableCell>
                 </TableRow>
@@ -481,9 +485,11 @@ export function PlacesTable({
                         <div className="text-[10px] text-muted-foreground">{row.parentName}</div>
                       ) : null}
                     </TableCell>
-                    <TableCell>
-                      <HeadChip row={row} noHeadLabel={noHeadLabel} />
-                    </TableCell>
+                    {headLabel ? (
+                      <TableCell>
+                        <HeadChip row={row} noHeadLabel={noHeadLabel} />
+                      </TableCell>
+                    ) : null}
                     <TableCell>
                       <ApprovalBar rate={row.rate} />
                     </TableCell>
@@ -515,7 +521,7 @@ export function PlacesTable({
                     <div className="text-xs text-muted-foreground">referrals</div>
                   </div>
                 </div>
-                <HeadChip row={row} noHeadLabel={noHeadLabel} />
+                {headLabel ? <HeadChip row={row} noHeadLabel={noHeadLabel} /> : null}
                 <ApprovalBar rate={row.rate} />
               </div>
             ))
