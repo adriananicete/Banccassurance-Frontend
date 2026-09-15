@@ -316,7 +316,7 @@ export function PlacesCard({
                       </div>
                       <div className="shrink-0 text-right">
                         {/* Blue for referrals; lighter in dark mode. */}
-                        <div className="text-base font-medium tabular-nums text-[#155dfc] dark:text-blue-400">
+                        <div className="text-lg font-medium tabular-nums text-[#155dfc] dark:text-blue-400">
                           {formatCount(item.total)}
                         </div>
                         <div className="text-[10px] text-muted-foreground">referrals</div>
