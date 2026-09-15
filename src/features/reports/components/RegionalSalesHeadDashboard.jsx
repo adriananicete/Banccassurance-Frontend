@@ -19,11 +19,12 @@
  *   region            { total, approved } for the whole region over the period.
  *   monthly / sliderRange
  *   officers          [{ code, name, parentName, total, approved }]
- *   workApproval / workGroups   The two "Your work" cards.
+ *   workApproval / workGroups   The two "Your work" cards, or null to leave one out.
  *   summaryLoading / summaryError · chartLoading / chartError · officersLoading / officersError
  *   onExport / isExporting / exportError
  */
 import { ChartAreaGradient } from "@/components/charts/ChartAreaGradient";
+import { cn } from "@/lib/utils";
 
 import { ALL_REGIONS } from "../dashboardData";
 import { presetLabel } from "../dashboardFormat";
@@ -70,11 +71,16 @@ export function RegionalSalesHeadDashboard({
         />
       </div>
 
-      {/* 1. Your work -- what only the RSH can move. */}
-      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-2">
-        {workApproval}
-        {workGroups}
-      </div>
+      {/* 1. Your work -- what only the RSH can move. A card with nothing in it
+          is not rendered (Adrian, 2026-09-15): the page hands in null for it,
+          the other card takes the full width, and with both empty the row is
+          gone. */}
+      {workApproval || workGroups ? (
+        <div className={cn("flex flex-col gap-5", workApproval && workGroups && "lg:grid lg:grid-cols-2")}>
+          {workApproval}
+          {workGroups}
+        </div>
+      ) : null}
 
       {/* 2. The region, or a picked group. */}
       <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[3fr_2fr]">

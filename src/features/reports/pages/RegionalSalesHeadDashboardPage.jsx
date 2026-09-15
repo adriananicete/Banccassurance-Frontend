@@ -70,6 +70,13 @@ export function RegionalSalesHeadDashboardPage() {
     (head) => head.approved && (head.scope ?? []).length === 0,
   )
 
+  // A "Your work" card shows only once its list has come back with something
+  // in it -- or failed, so a failure is not silently hidden. Loading and empty
+  // both render nothing (Adrian: an empty card should not take the space).
+  const pendingRows = pending.data?.rows ?? []
+  const showApproval = Boolean(pending.error) || pendingRows.length > 0
+  const showNeedGroups = Boolean(areaHeads.error) || (areaHeads.isSuccess && needGroups.length > 0)
+
   // ── Performance ────────────────────────────────────────────────────────
   const dashboard = useReportsDashboard({ enabled: isAllTime })
   const areaSummary = useReportSummary({ groupBy: 'AREA', preset })
@@ -146,21 +153,25 @@ export function RegionalSalesHeadDashboardPage() {
         sliderRange={isAllTime ? allTimeSliderRange(currentMonth) : null}
         officers={officers}
         workApproval={
+          showApproval ? (
           <PendingApprovalsCard
-            rows={(pending.data?.rows ?? []).map((row) => ({ ...row, place: placeOf(row, lookups) }))}
+            rows={pendingRows.map((row) => ({ ...row, place: placeOf(row, lookups) }))}
             count={counts[APPROVAL_STATUS.PENDING]}
             loading={isPending(pending)}
             error={pending.error}
             onApprove={(row) => setTarget({ row, action: APPROVAL_ACTION.APPROVE })}
           />
+          ) : null
         }
         workGroups={
-          <NeedsGroupsCard
-            people={needGroups}
-            loading={isPending(areaHeads)}
-            error={areaHeads.error}
-            assignTo={paths.people}
-          />
+          showNeedGroups ? (
+            <NeedsGroupsCard
+              people={needGroups}
+              loading={false}
+              error={areaHeads.error}
+              assignTo={paths.people}
+            />
+          ) : null
         }
         summaryLoading={summaryQueries.some(isPending)}
         summaryError={firstError(...summaryQueries)}
