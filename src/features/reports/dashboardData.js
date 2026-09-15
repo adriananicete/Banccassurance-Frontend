@@ -265,6 +265,70 @@ export function buildLandbankGroups({
 }
 
 /**
+ * The Regional Sales Head's groups, for their Groups card -- EVERY group they
+ * hold, at 0 when it has no referrals in the period (F1), each with its Area
+ * Sales Head.
+ *
+ *   scopes      The RSH's own `user.scopes` (level GROUP) -- the list.
+ *   areaRows    groupBy=AREA rows (the RSH is scoped automatically), joined on GroupCode.
+ *   areaHeads   GET /users?role=AREA_SALES_HEAD (R10) -- the approved head whose
+ *               `scope` names the group. A group has at most one (F9).
+ */
+export function buildRegionGroups({ scopes = [], areaRows = [], areaHeads = [] }) {
+  const rowsByGroup = new Map(areaRows.map((row) => [Number(row.GroupCode), row]))
+
+  const headsByGroup = new Map()
+  for (const head of areaHeads) {
+    if (!isApproved(head)) continue
+    for (const group of head.scope ?? []) {
+      if (group.groupCode != null && !headsByGroup.has(group.groupCode)) headsByGroup.set(group.groupCode, head)
+    }
+  }
+
+  return scopes
+    .filter((scope) => scope.level === 'GROUP')
+    .map((scope) => {
+      const code = scope.groupCode ?? scope.code
+      return {
+        code,
+        name: scope.groupName ?? scope.name,
+        regionName: scope.regionName ?? null,
+        ...toFigures(rowsByGroup.get(Number(code))),
+        ...headFields(headsByGroup.get(code)),
+      }
+    })
+}
+
+/**
+ * The Account Officers under the groups in view, for the Regional Sales
+ * Head's table.
+ *
+ *   results   [{ groupCode, rows }] from groupBy=AO&parentGroupCode=
+ *   groups    The groups, for `parentName`.
+ *
+ * At groupBy=AO a row's `GroupCode` is the officer's code and `GroupName` is
+ * whatever the procedure names them (F5); when the name is missing or just
+ * repeats the code, the code is the label. Officers with no referrals in the
+ * period are absent (F1) -- there is no lookup to start from.
+ */
+export function buildAccountOfficers({ results = [], groups = [] }) {
+  const groupNames = new Map(groups.map((group) => [String(group.code), group.name]))
+
+  return results.flatMap(({ groupCode, rows }) =>
+    rows.map((row) => {
+      const code = String(row.GroupCode)
+      const named = row.GroupName && String(row.GroupName) !== code
+      return {
+        code: `${groupCode}:${code}`,
+        name: named ? row.GroupName : code,
+        parentName: groupNames.get(String(groupCode)) ?? null,
+        ...toFigures(row),
+      }
+    }),
+  )
+}
+
+/**
  * EVERY branch of the given groups, for the Sector Head's Branches table -- at
  * 0 when a branch has no referrals in the period (Adrian, 2026-09-14).
  *
