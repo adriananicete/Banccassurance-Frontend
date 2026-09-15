@@ -39,6 +39,7 @@ import { IoSettingsOutline } from "react-icons/io5";
  *   onLogout / isLoggingOut
  *   unreadNotifications  A number. Shown on the bell when above zero.
  *   canMessage     False hides the messages icon -- for the roles with no chat.
+ *   unreadMessages A number. Shown on the message icon when above zero.
  *   isDarkTheme / onThemeChange(checked)   The footer's light / dark switch.
  *   children       The routed page.
  */
@@ -58,6 +59,7 @@ export function AppShell({
   isLoggingOut,
   unreadNotifications = 0,
   canMessage = false,
+  unreadMessages = 0,
   isDarkTheme = false,
   onThemeChange,
   children,
@@ -233,11 +235,18 @@ export function AppShell({
               {formatWeekdayDate()}
             </span>
 
-            {/* Messages has no `to` yet -- the screen is not built. Hidden for
-                the Sector Head, Department Head and Superadmin, who have no
-                chat at all: every /messages endpoint answers 403 for them
-                (Adrian, 2026-09-15). */}
-            {canMessage ? <HeaderIconButton Icon={LuMessageSquareMore} label="Messages" /> : null}
+            {/* The only way to Messages -- not in the sidebar (Adrian,
+                2026-09-15). Hidden for the Sector Head, Department Head and
+                Superadmin, who have no chat: every /messages endpoint answers
+                403 for them. The count is every unread message. */}
+            {canMessage ? (
+              <HeaderIconButton
+                Icon={LuMessageSquareMore}
+                label={unreadMessages > 0 ? `Messages, ${unreadMessages} unread` : "Messages"}
+                to={paths.messages}
+                badge={unreadMessages}
+              />
+            ) : null}
 
             {/* The only way to Notifications -- it left the sidebar (Adrian).
                 The count is every unread the user has. */}

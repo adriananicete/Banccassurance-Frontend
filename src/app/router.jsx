@@ -14,6 +14,7 @@ import {
 import { AuthLayoutRoute } from '@/features/auth/pages/AuthLayoutRoute'
 import { AssignmentsPage } from '@/features/assignments/pages/AssignmentsPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
+import { MessagesPage } from '@/features/messages/pages/MessagesPage'
 import { NotificationsPage } from '@/features/notifications/pages/NotificationsPage'
 import { VerifyOtpPage } from '@/features/auth/pages/VerifyOtpPage'
 import { DashboardPage } from '@/features/reports/pages/DashboardPage'
@@ -171,13 +172,8 @@ export const router = createBrowserRouter([
             children: [
               {
                 path: paths.messages,
-                element: (
-                  <NotBuiltYet
-                    title="Messages"
-                    note="Sends are HTTP; the socket is delivery only. Needs socket.io-client@^4 — the major must match the server."
-                    endpoints={['GET /messages/conversations', 'POST /messages/conversations/:id']}
-                  />
-                ),
+                // Reached from the header's message icon, not the sidebar (Adrian).
+                element: <MessagesPage />,
               },
             ],
           },
