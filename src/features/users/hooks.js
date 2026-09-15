@@ -1,4 +1,4 @@
-import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { usePagedQuery } from '@/hooks/usePagedQuery'
 import { LOOKUP_STALE_TIME } from '@/lib/queryClient'
@@ -33,50 +33,32 @@ export function usePendingApprovals(limit = 5) {
   })
 }
 
-const COUNTED_STATUSES = [
-  APPROVAL_STATUS.PENDING,
-  APPROVAL_STATUS.APPROVED,
-  APPROVAL_STATUS.REJECTED,
-  APPROVAL_STATUS.ALL,
-]
+const COUNTS_PARAMS = { status: APPROVAL_STATUS.ALL, page: 1, pageSize: 1 }
 
 /**
- * How many registrations sit under each status, for the status cards.
+ * How many registrations sit under each status, for the Overview tiles.
  *
- * The API has no counts endpoint, so this asks each status for one row and
- * reads `pagination.totalCount`. Four small calls, ignoring the search, so the
- * cards describe the whole queue rather than the filtered page.
+ * One call: the list response carries `counts` over the whole scope,
+ * ignoring `status` and `search` (R8), so a single row is asked for and the
+ * counts read off it.
  *
- * Returns { PENDING, APPROVED, REJECTED, ALL } -> number | null, plus the
- * first load and the first error.
+ * Returns { counts: { PENDING, APPROVED, REJECTED, DEACTIVATED, ALL } | {},
+ * loading, error }.
  */
 export function useApprovalCounts() {
-  const queries = useQueries({
-    queries: COUNTED_STATUSES.map((status) => {
-      const params = { status, page: 1, pageSize: 1 }
-      return {
-        queryKey: queryKeys.users.approvals(params),
-        queryFn: () => fetchApprovals(params),
-      }
-    }),
+  const query = useQuery({
+    queryKey: queryKeys.users.approvals(COUNTS_PARAMS),
+    queryFn: () => fetchApprovals(COUNTS_PARAMS),
   })
 
-  const counts = Object.fromEntries(
-    COUNTED_STATUSES.map((status, index) => [
-      status,
-      queries[index].data?.pagination?.totalCount ?? null,
-    ]),
-  )
-
   return {
-    counts,
-    loading: queries.some((query) => query.isPending && query.fetchStatus !== 'idle'),
-    error: queries.find((query) => query.error)?.error ?? null,
+    counts: query.data?.counts ?? {},
+    loading: query.isPending && query.fetchStatus !== 'idle',
+    error: query.error ?? null,
   }
 }
-
 /**
- * Approve, reject or deactivate. On success every approvals list and count is
+ * Approve, reject, deactivate or reactivate. On success every approvals list and count is
  * refetched -- the row moves status, so every filter and every card changes.
  */
 export function useApprovalAction() {

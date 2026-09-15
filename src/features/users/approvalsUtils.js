@@ -13,7 +13,10 @@ import { ROLES } from '@/constants/roles'
 export const APPROVAL_STATUS = {
   PENDING: 'PENDING',
   APPROVED: 'APPROVED',
+  /** Refused at registration -- never comes back (F13). */
   REJECTED: 'REJECTED',
+  /** Approved once, then switched off by a superadmin -- can be reactivated (F13). */
+  DEACTIVATED: 'DEACTIVATED',
   ALL: 'ALL',
 }
 
@@ -28,6 +31,7 @@ export const APPROVAL_STATUS_LABELS = {
   [APPROVAL_STATUS.PENDING]: 'Pending',
   [APPROVAL_STATUS.APPROVED]: 'Approved',
   [APPROVAL_STATUS.REJECTED]: 'Rejected',
+  [APPROVAL_STATUS.DEACTIVATED]: 'Deactivated',
   [APPROVAL_STATUS.ALL]: 'All',
 }
 
@@ -58,6 +62,8 @@ export const APPROVAL_STATUS_STYLES = {
     'bg-[#00bb7c]/10 text-[#00996a] hover:bg-[#00bb7c]/10 dark:bg-[#00bb7c]/15 dark:text-[#00bb7c]',
   [APPROVAL_STATUS.REJECTED]:
     'bg-red-500/10 text-red-700 hover:bg-red-500/10 dark:bg-red-500/15 dark:text-red-400',
+  [APPROVAL_STATUS.DEACTIVATED]:
+    'bg-slate-500/10 text-slate-700 hover:bg-slate-500/10 dark:bg-slate-500/15 dark:text-slate-300',
 }
 
 /**
@@ -93,6 +99,13 @@ export const APPROVAL_CONFIRM = {
     confirmLabel: 'Deactivate',
     pendingLabel: 'Deactivating…',
     destructive: true,
+  },
+  // Superadmin only, on a DEACTIVATED row (F13, F15).
+  [APPROVAL_ACTION.REACTIVATE]: {
+    title: (name) => `Reactivate ${name}?`,
+    description: 'They can sign in again with their existing account. No email is sent.',
+    confirmLabel: 'Reactivate',
+    pendingLabel: 'Reactivating…',
   },
 }
 
@@ -130,6 +143,7 @@ const APPROVAL_TOASTS = {
   [APPROVAL_ACTION.APPROVE]: (name) => toast.success(`${name} approved`),
   [APPROVAL_ACTION.REJECT]: (name) => toast.error(`${name} rejected`),
   [APPROVAL_ACTION.DEACTIVATE]: (name) => toast(`${name} deactivated`),
+  [APPROVAL_ACTION.REACTIVATE]: (name) => toast.success(`${name} reactivated`),
 }
 
 export function notifyApproval(action, name) {

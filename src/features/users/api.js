@@ -108,7 +108,27 @@ export async function fetchApprovals({ status, search, page, pageSize }) {
   const { data } = await apiClient.get('/users/approvals', {
     params: { status, search: search || undefined, page, pageSize },
   })
-  return { rows: (data.data ?? []).map(toApprovalRow), pagination: data.pagination ?? null }
+  return {
+    rows: (data.data ?? []).map(toApprovalRow),
+    pagination: data.pagination ?? null,
+    counts: toApprovalCounts(data.counts),
+  }
+}
+
+/**
+ * `counts` (R8): { Pending, Approved, Rejected, Deactivated, Total } over the
+ * caller's whole scope, ignoring `status` and `search`, keyed here by the
+ * APPROVAL_STATUS values the screen filters on. Null if the response has none.
+ */
+function toApprovalCounts(counts) {
+  if (!counts) return null
+  return {
+    PENDING: counts.Pending ?? 0,
+    APPROVED: counts.Approved ?? 0,
+    REJECTED: counts.Rejected ?? 0,
+    DEACTIVATED: counts.Deactivated ?? 0,
+    ALL: counts.Total ?? 0,
+  }
 }
 
 function toApprovalRow(row) {
