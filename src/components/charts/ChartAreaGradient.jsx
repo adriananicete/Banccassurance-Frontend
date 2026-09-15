@@ -39,7 +39,7 @@
  */
 import { useId, useState } from "react";
 import { HiBadgeCheck, HiUserGroup } from "react-icons/hi";
-import { Area, AreaChart, Brush, CartesianGrid, XAxis } from "recharts";
+import { Area, AreaChart, Brush, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { DataPlaceholder } from "@/components/DataPlaceholder";
 import {
@@ -79,11 +79,14 @@ const chartConfig = {
 
 /*
   The referrals and approved figures share one class so they line up. Both go
-  through cn(), so both end with text-3xl's own line height: CardTitle's
+  through cn(), so both end with text-2xl's own line height: CardTitle's
   leading-none is dropped by tailwind-merge, and a leading-none kept on only one
   of them put its label 6px higher.
+
+  text-2xl, down from text-3xl (Adrian, 2026-09-15), so four- and five-digit
+  figures still fit three across beside the toggle.
 */
-const HEADLINE_CLASS = "flex items-center gap-2 text-3xl font-semibold tabular-nums";
+const HEADLINE_CLASS = "flex items-center gap-2 text-2xl font-semibold whitespace-nowrap tabular-nums";
 
 export function ChartAreaGradient({
   data = [],
@@ -130,22 +133,24 @@ export function ChartAreaGradient({
       : data.map((point, index) => ({ ...point, slot: String(index) }));
   const monthAt = (slot) => plotted[Number(slot)]?.month;
   return (
-    <Card className={cn("h-full", className)}>
+    <Card className={cn("h-full gap-4 pt-4", className)}>
       {/* A rule under the header and over the footer, per Adrian, so the headline,
           the chart and its caption read as three parts. Tighter than the Card
-          default so the fixed-height chart keeps its room. */}
+          default so the fixed-height chart keeps its room: 16px above the header
+          and 12px under it (Adrian, 2026-09-15; was 24 and 16). */}
       {/* Three columns from sm: referrals, approved in the middle while
           comparing, the toggle on the right. On phones approved drops to a
-          second row under referrals. */}
-      <CardHeader className="border-b [.border-b]:pb-4 sm:has-data-[slot=card-action]:grid-cols-[1fr_auto_1fr]">
+          second row under referrals. The side columns are minmax(0, 1fr), so a long
+          label truncates rather than running under the approved figure. */}
+      <CardHeader className="border-b [.border-b]:pb-3 sm:has-data-[slot=card-action]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
         {/* The number is the headline and the words explain it. */}
-        <div className="col-start-1 row-start-1 space-y-1.5">
+        <div className="col-start-1 row-start-1 min-w-0 space-y-1.5">
           <CardTitle className={HEADLINE_CLASS}>
             {/* Decorative -- the label below already names the figure. */}
-            <HiUserGroup aria-hidden className="size-7 text-muted-foreground" />
+            <HiUserGroup aria-hidden className="size-6 text-muted-foreground" />
             {loading || error || headline == null ? "—" : headline.toLocaleString("en-PH")}
           </CardTitle>
-          {headlineLabel ? <CardDescription>{headlineLabel}</CardDescription> : null}
+          {headlineLabel ? <CardDescription className="truncate">{headlineLabel}</CardDescription> : null}
         </div>
 
         {/* Total approved, only while comparing (Adrian, 2026-09-15): built like
@@ -156,7 +161,7 @@ export function ChartAreaGradient({
           <div className="col-span-2 row-start-2 space-y-1.5 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:justify-self-center">
             <div className={cn("leading-none font-semibold", HEADLINE_CLASS)}>
               {/* Dark green, a shade under the #00bb7c share beside it (Adrian). */}
-              <HiBadgeCheck aria-hidden className="size-7 text-emerald-700 dark:text-emerald-500" />
+              <HiBadgeCheck aria-hidden className="size-6 text-emerald-700 dark:text-emerald-500" />
               {headlineApproved.toLocaleString("en-PH")}
               {headline > 0 ? (
                 <span className="rounded-md bg-[#00bb7c]/10 px-1.5 py-0.5 text-xs font-medium text-[#00bb7c] tabular-nums">
@@ -164,7 +169,7 @@ export function ChartAreaGradient({
                 </span>
               ) : null}
             </div>
-            <CardDescription>
+            <CardDescription className="truncate">
               Total approved{approvedLabel ? ` · ${approvedLabel}` : null}
             </CardDescription>
           </div>
@@ -190,8 +195,11 @@ export function ChartAreaGradient({
 
       {/* `flex-1 min-h-0` lets the chart shrink to what is left of the card.
           Without min-h-0 a flex child will not go below its content size and
-          the card overflows instead. */}
-      <CardContent className="flex min-h-0 flex-1 items-center justify-center">
+          the card overflows instead. px-2 rather than px-6, and a gap-4 card, so the
+          plot runs nearer the card's edges (Adrian, 2026-09-15); the chart's own
+          12px right margin keeps the last month label from clipping; on the left the
+          Y axis gives the first one room. */}
+      <CardContent className="flex min-h-0 flex-1 items-center justify-center px-2">
         {loading || error || !hasData ? (
           <DataPlaceholder
             loading={loading}
@@ -203,8 +211,18 @@ export function ChartAreaGradient({
           // aspect-auto beats ChartContainer's default aspect-video, so the
           // chart follows the card's height rather than its own ratio.
           <ChartContainer config={chartConfig} className="aspect-auto h-full w-full">
-            <AreaChart accessibilityLayer data={plotted} margin={{ left: 12, right: 12, top: 8 }}>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
+            <AreaChart accessibilityLayer data={plotted} margin={{ left: 0, right: 12, top: 8, bottom: 0 }}>
+              {/* The plot area on a light grey (--muted), with the dotted lines a
+                  little stronger than shadcn's stroke-border/50, which barely
+                  showed (Adrian, 2026-09-15). An explicit stroke also takes the
+                  lines out of ChartContainer's #ccc override. */}
+              <CartesianGrid
+                vertical={false}
+                strokeDasharray="3 3"
+                fill="var(--muted)"
+                stroke="var(--muted-foreground)"
+                strokeOpacity={0.35}
+              />
               <XAxis
                 dataKey="slot"
                 ticks={data.length === 1 ? ["0"] : undefined}
@@ -213,6 +231,18 @@ export function ChartAreaGradient({
                 tickMargin={8}
                 tick={{ fontSize: 11 }}
                 tickFormatter={(slot) => formatMonthShort(monthAt(slot))}
+              />
+              {/* Referral counts up the left (Adrian, 2026-09-15): whole numbers
+                  only, on a linear scale -- a log scale (0, 10, 100, 1000) cannot
+                  place a month with 0. Width fits a four-digit "1,000". */}
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                tickMargin={4}
+                width={36}
+                allowDecimals={false}
+                tick={{ fontSize: 11 }}
+                tickFormatter={(value) => value.toLocaleString("en-PH")}
               />
               <ChartTooltip
                 cursor={false}
