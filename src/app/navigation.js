@@ -51,8 +51,8 @@ export const NAV_ITEMS = [
     to: paths.referrals,
     label: 'Referrals',
     Icon: LuList,
-    // Not for the overseers: they read the tenant from the dashboard and
-    // reports, not the list (Adrian, 2026-09-14).
+    // Every role but the superadmin. For the Department Head and Sector Head it
+    // is the status drill-down by place (Adrian, 2026-09-15).
     denied: REFERRAL_LIST_DENIED_ROLES,
   },
   {

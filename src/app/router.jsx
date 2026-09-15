@@ -17,6 +17,7 @@ import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { NotificationsPage } from '@/features/notifications/pages/NotificationsPage'
 import { VerifyOtpPage } from '@/features/auth/pages/VerifyOtpPage'
 import { DashboardPage } from '@/features/reports/pages/DashboardPage'
+import { ReferralsPage } from '@/features/referrals/pages/ReferralsPage'
 import { ReportsPage } from '@/features/reports/pages/ReportsPage'
 import { ApprovalsPage } from '@/features/users/pages/ApprovalsPage'
 import { ChooseTenantPage } from '@/features/users/pages/ChooseTenantPage'
@@ -102,7 +103,7 @@ export const router = createBrowserRouter([
               },
               {
                 path: paths.reports,
-                // Picks the tenant head's drill-down; other roles get the scaffold.
+                // The export page for the tenant heads; other roles get the scaffold.
                 element: <ReportsPage />,
               },
             ],
@@ -113,13 +114,9 @@ export const router = createBrowserRouter([
             children: [
               {
                 path: paths.referrals,
-                element: (
-                  <NotBuiltYet
-                    title="Referrals"
-                    note="Paged, searchable, sortable and filterable — all server-side."
-                    endpoints={['GET /referrals', 'GET /referrals/counts']}
-                  />
-                ),
+                // The status drill-down for the tenant heads; the scaffold for everyone else.
+                element: <ReferralsPage />,
+
               },
             ],
           },

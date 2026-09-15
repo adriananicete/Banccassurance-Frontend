@@ -6,7 +6,7 @@
  * of StatTiles, then the table card), Breadcrumb, Table, Select and Button for the
  * period and export (via DashboardParts), Badge.
  *
- * Presentational and CONTROLLED -- `pages/ReportsPage.jsx` owns the period and
+ * Presentational and CONTROLLED -- `features/referrals/pages/ReferralsPage.jsx` owns the period and
  * the drill path, because both change the request.
  *
  * The props contract:
@@ -154,7 +154,7 @@ export function StatusReport({
     <div className="flex w-full flex-col gap-5">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <DashboardTitle
-          title="Reports"
+          title="Referrals"
           subtitle={`${tenantName} referrals by status, place by place`}
         />
         <ExportControl

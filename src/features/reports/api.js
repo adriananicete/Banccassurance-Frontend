@@ -52,15 +52,23 @@ export async function fetchSummary({
 }
 
 /**
- * GET /reports/export?preset= -> an .xlsx file, saved in the browser.
+ * GET /reports/export?preset=&dateFrom=&dateTo=&status= -> an .xlsx file,
+ * saved in the browser.
  *
  * Always the caller's whole scope (BACKEND-REQUESTS Q2) -- it takes no region.
- * The filename is the backend's, read from Content-Disposition, which CORS now
- * exposes (R5). Without that header the fallback name is used.
+ * `dateFrom` / `dateTo` are read only with `preset=custom`; `status` narrows to
+ * one of the eight. The filename is the backend's, read from
+ * Content-Disposition, which CORS now exposes (R5). Without that header the
+ * fallback name is used.
  */
-export async function downloadExport({ preset }) {
+export async function downloadExport({ preset, dateFrom, dateTo, status }) {
   const response = await apiClient.get('/reports/export', {
-    params: { preset },
+    params: {
+      preset,
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
+      status: status || undefined,
+    },
     responseType: 'blob',
   })
 
