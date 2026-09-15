@@ -18,8 +18,8 @@
  *   headlineApproved  Number, or null. How many of `headline` were approved.
  *                  While "Compare with approved" is on, it shows in the middle
  *                  of the header, built like the headline, with its share of
- *                  the headline under it in the approved green.
- *   approvedLabel  After the share, e.g. the period: "36% approved · All time".
+ *                  the headline beside it in the approved green.
+ *   approvedLabel  After "Total approved", e.g. the period: "Total approved · All time".
  *   title          What the chart is. Shown in the footer, under the chart.
  *   description    One sentence under the title: what is plotted, and where.
  *   empty          What to say when data is empty. Name the reason.
@@ -141,23 +141,23 @@ export function ChartAreaGradient({
         </div>
 
         {/* Total approved, only while comparing (Adrian, 2026-09-15): built like
-            the referrals headline -- icon, number at the same size, a line under
-            it -- with the approved share in that line, green #00bb7c. */}
+            the referrals headline -- icon, number at the same size, "Total
+            approved · <period>" under it -- with the approved share as a green
+            #00bb7c badge beside the number. */}
         {showApproved && !loading && !error && headlineApproved != null ? (
           <div className="col-span-2 row-start-2 space-y-1.5 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:justify-self-center">
             <div className="flex items-center gap-2 text-3xl leading-none font-semibold tabular-nums">
-              <HiBadgeCheck aria-hidden className="size-7 text-muted-foreground" />
+              {/* Dark green, a shade under the #00bb7c share beside it (Adrian). */}
+              <HiBadgeCheck aria-hidden className="size-7 text-emerald-700 dark:text-emerald-500" />
               {headlineApproved.toLocaleString("en-PH")}
-            </div>
-            <CardDescription>
               {headline > 0 ? (
-                <span className="font-medium text-[#00bb7c]">
+                <span className="rounded-md bg-[#00bb7c]/10 px-1.5 py-0.5 text-xs font-medium text-[#00bb7c] tabular-nums">
                   {Math.round((headlineApproved / headline) * 100)}% approved
                 </span>
-              ) : (
-                "Total approved"
-              )}
-              {approvedLabel ? ` · ${approvedLabel}` : null}
+              ) : null}
+            </div>
+            <CardDescription>
+              Total approved{approvedLabel ? ` · ${approvedLabel}` : null}
             </CardDescription>
           </div>
         ) : null}
