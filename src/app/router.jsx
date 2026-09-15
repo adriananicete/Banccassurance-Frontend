@@ -16,6 +16,7 @@ import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { VerifyOtpPage } from '@/features/auth/pages/VerifyOtpPage'
 import { DashboardPage } from '@/features/reports/pages/DashboardPage'
 import { ReportsPage } from '@/features/reports/pages/ReportsPage'
+import { ApprovalsPage } from '@/features/users/pages/ApprovalsPage'
 import { ChooseTenantPage } from '@/features/users/pages/ChooseTenantPage'
 import { RegisterPage } from '@/features/users/pages/RegisterPage'
 import { GuestOnly } from '@/routes/GuestOnly'
@@ -148,13 +149,8 @@ export const router = createBrowserRouter([
             children: [
               {
                 path: paths.approvals,
-                element: (
-                  <NotBuiltYet
-                    title="Approvals"
-                    note="Each role approves exactly the one below it, and no further."
-                    endpoints={['GET /users/approvals', 'POST /users/approvals/action']}
-                  />
-                ),
+                // Each role approves exactly the one below it; the API scopes the list.
+                element: <ApprovalsPage />,
               },
             ],
           },

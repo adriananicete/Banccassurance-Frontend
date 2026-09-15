@@ -30,3 +30,6 @@ dist-ssr
 *.sw?
 
 context
+
+# Adrian's design reference screenshots
+screenshots/
