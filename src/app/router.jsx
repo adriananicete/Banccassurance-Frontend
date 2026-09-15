@@ -12,6 +12,7 @@ import {
   ROLES,
 } from '@/constants/roles'
 import { AuthLayoutRoute } from '@/features/auth/pages/AuthLayoutRoute'
+import { AssignmentsPage } from '@/features/assignments/pages/AssignmentsPage'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { NotificationsPage } from '@/features/notifications/pages/NotificationsPage'
 import { VerifyOtpPage } from '@/features/auth/pages/VerifyOtpPage'
@@ -27,7 +28,7 @@ import { paths } from '@/routes/paths'
 
 import { AppLayout } from './AppLayout'
 import { NotBuiltYet } from './NotBuiltYet'
-import { ScaffoldHome } from './ScaffoldHome'
+import { HomeRedirect } from './HomeRedirect'
 
 const EVERY_ROLE_EXCEPT_SUPERADMIN = Object.values(ROLES).filter(
   (role) => role !== ROLES.SUPERADMIN,
@@ -85,7 +86,8 @@ export const router = createBrowserRouter([
       {
         element: <AppLayout />,
         children: [
-          { path: paths.home, element: <ScaffoldHome /> },
+          // The Dashboard, or Approvals for a superadmin -- see homeFor.
+          { path: paths.home, element: <HomeRedirect /> },
 
           {
             element: <RequireRole allowed={EVERY_ROLE_EXCEPT_SUPERADMIN} />,
@@ -161,18 +163,8 @@ export const router = createBrowserRouter([
             children: [
               {
                 path: paths.people,
-                element: (
-                  <NotBuiltYet
-                    title="Assignments"
-                    note="These three replace the whole set rather than adding to it — read with the GET before writing, or saving drops whatever the screen did not know about."
-                    endpoints={[
-                      'GET · PUT /users/:userId/branches',
-                      'GET · PUT /users/:userId/groups',
-                      'GET · PUT /users/:userId/region',
-                      'GET /users/assignable-branches',
-                    ]}
-                  />
-                ),
+                // PhilLife heads assign the tier below; the superadmin keeps the scaffold inside.
+                element: <AssignmentsPage />,
               },
             ],
           },
