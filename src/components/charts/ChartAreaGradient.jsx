@@ -16,8 +16,10 @@
  *                  Null renders an em dash rather than a zero.
  *   headlineLabel  The line under it. MUST NAME THE PERIOD the figure covers.
  *   headlineApproved  Number, or null. How many of `headline` were approved.
- *                  While "Compare with approved" is on, its share of the
- *                  headline shows beside the number, in the approved green.
+ *                  While "Compare with approved" is on, it shows in the middle
+ *                  of the header, built like the headline, with its share of
+ *                  the headline under it in the approved green.
+ *   approvedLabel  After the share, e.g. the period: "36% approved · All time".
  *   title          What the chart is. Shown in the footer, under the chart.
  *   description    One sentence under the title: what is plotted, and where.
  *   empty          What to say when data is empty. Name the reason.
@@ -36,7 +38,7 @@
  * breaking the line. The dashboards send 0 instead, so the line stays whole.
  */
 import { useId, useState } from "react";
-import { HiUserGroup } from "react-icons/hi";
+import { HiBadgeCheck, HiUserGroup } from "react-icons/hi";
 import { Area, AreaChart, Brush, CartesianGrid, XAxis } from "recharts";
 
 import { DataPlaceholder } from "@/components/DataPlaceholder";
@@ -80,6 +82,7 @@ export function ChartAreaGradient({
   headline = null,
   headlineLabel,
   headlineApproved = null,
+  approvedLabel,
   title = "Referrals by month",
   description,
   empty = "No referrals recorded yet.",
@@ -123,28 +126,47 @@ export function ChartAreaGradient({
       {/* A rule under the header and over the footer, per Adrian, so the headline,
           the chart and its caption read as three parts. Tighter than the Card
           default so the fixed-height chart keeps its room. */}
-      <CardHeader className="border-b [.border-b]:pb-4">
+      {/* Three columns from sm: referrals, approved in the middle while
+          comparing, the toggle on the right. On phones approved drops to a
+          second row under referrals. */}
+      <CardHeader className="border-b [.border-b]:pb-4 sm:has-data-[slot=card-action]:grid-cols-[1fr_auto_1fr]">
         {/* The number is the headline and the words explain it. */}
-        <CardTitle className="flex items-center gap-2 text-3xl font-semibold tabular-nums">
-          {/* Decorative -- the label below already names the figure. */}
-          <HiUserGroup aria-hidden className="size-7 text-muted-foreground" />
-          {loading || error || headline == null ? "—" : headline.toLocaleString("en-PH")}
-          {/* The approved share, only while comparing (Adrian): the same
-              question the green line answers, as one figure. Green #00bb7c,
-              the approved colour; nothing shown when there is nothing to divide. */}
-          {showApproved && !loading && !error && headline > 0 && headlineApproved != null ? (
-            <span className="rounded-md bg-[#00bb7c]/10 px-1.5 py-0.5 text-xs font-medium text-[#00bb7c] tabular-nums">
-              {Math.round((headlineApproved / headline) * 100)}% approved
-            </span>
-          ) : null}
-        </CardTitle>
-        {headlineLabel ? <CardDescription>{headlineLabel}</CardDescription> : null}
+        <div className="col-start-1 row-start-1 space-y-1.5">
+          <CardTitle className="flex items-center gap-2 text-3xl font-semibold tabular-nums">
+            {/* Decorative -- the label below already names the figure. */}
+            <HiUserGroup aria-hidden className="size-7 text-muted-foreground" />
+            {loading || error || headline == null ? "—" : headline.toLocaleString("en-PH")}
+          </CardTitle>
+          {headlineLabel ? <CardDescription>{headlineLabel}</CardDescription> : null}
+        </div>
+
+        {/* Total approved, only while comparing (Adrian, 2026-09-15): built like
+            the referrals headline -- icon, number at the same size, a line under
+            it -- with the approved share in that line, green #00bb7c. */}
+        {showApproved && !loading && !error && headlineApproved != null ? (
+          <div className="col-span-2 row-start-2 space-y-1.5 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:justify-self-center">
+            <div className="flex items-center gap-2 text-3xl leading-none font-semibold tabular-nums">
+              <HiBadgeCheck aria-hidden className="size-7 text-muted-foreground" />
+              {headlineApproved.toLocaleString("en-PH")}
+            </div>
+            <CardDescription>
+              {headline > 0 ? (
+                <span className="font-medium text-[#00bb7c]">
+                  {Math.round((headlineApproved / headline) * 100)}% approved
+                </span>
+              ) : (
+                "Total approved"
+              )}
+              {approvedLabel ? ` · ${approvedLabel}` : null}
+            </CardDescription>
+          </div>
+        ) : null}
 
         {/* Opposite the headline: the compare toggle, hidden when there is no
             chart to compare on. A toggle, so it says whether it is on --
             aria-pressed and a muted fill. Neutral, not green: Adrian took the
             colour off. */}
-        <CardAction className="flex items-center gap-2">
+        <CardAction className="flex items-center gap-2 sm:col-start-3">
           {hasData && !loading && !error ? (
             <Toggle
               variant="outline"
