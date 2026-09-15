@@ -2,8 +2,8 @@
  * The Reports page for a tenant head (Department Head, Sector Head): referrals
  * by status for every place one level down, drilling further on a row click.
  *
- * Built from shadcn components (Adrian, 2026-09-14): Card (a row of status
- * cards, then the table card), Breadcrumb, Table, Select and Button for the
+ * Built from shadcn components (Adrian, 2026-09-14): Card (the status overview
+ * of StatTiles, then the table card), Breadcrumb, Table, Select and Button for the
  * period and export (via DashboardParts), Badge.
  *
  * Presentational and CONTROLLED -- `pages/ReportsPage.jsx` owns the period and
@@ -35,6 +35,7 @@ import {
 import { useState } from "react";
 
 import { DataPlaceholder } from "@/components/DataPlaceholder";
+import { StatTile } from "@/components/StatTile";
 import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
@@ -46,10 +47,8 @@ import {
 } from "@/components/ui/breadcrumb";
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -72,56 +71,39 @@ import { reportTotals } from "../reportData";
 import { DashboardTitle, ExportControl } from "./DashboardParts";
 
 /**
- * The statuses whose count carries a colour (Adrian, 2026-09-14). Keyed by
- * status value; each class has a dark-mode pair. Now on the status cards only --
- * taken off the table (Adrian, 2026-09-15), where a picked card's column wash
- * does the pointing.
- *   Approved  green #00bb7c -- the approved colour used everywhere
- *   Declined  red
- *   Deferred  dark yellow
+ * Each status's tile accent (StatTile) -- Adrian's screenshots/card.png on the
+ * Reports page, 2026-09-15. The hues are the ones the status cards already had:
+ * Referred blue (the referrals colour), Presented violet, Closed Pending amber,
+ * Postponed orange, Approved green, Declined red, Deferred yellow, Lost slate.
  */
-const STATUS_TEXT = {
-  Approved: "text-[#00bb7c]",
-  Declined: "text-red-600 dark:text-red-400",
-  Deferred: "text-yellow-600 dark:text-yellow-500",
+const STATUS_ACCENT = {
+  Referred: "total",
+  Presented: "progress",
+  "Closed Pending": "queue",
+  Postponed: "delayed",
+  Approved: "done",
+  Declined: "stopped",
+  Deferred: "held",
+  Lost: "ended",
 };
 
 /**
- * The colour each status card fades up from (Adrian, 2026-09-15) -- in place of
- * section-cards' grey `from-primary/5`. Approved, Declined and Deferred match
- * the table's colours; Referred is the referrals blue; the rest are picked to
- * stay apart: Presented violet, Closed Pending amber, Postponed orange, Lost
- * slate. Minimal (Adrian): 4% at the bottom, yellow included, 8% on hover. Full class
- * strings so Tailwind generates them.
+ * The wash over a picked status's column in the table -- title, every count and
+ * the total -- in its tile's hue (Adrian, 2026-09-15). Full class strings so
+ * Tailwind generates them.
  */
-const STATUS_TINT = {
-  Referred: "from-blue-500/4 hover:from-blue-500/8",
-  Presented: "from-violet-500/4 hover:from-violet-500/8",
-  "Closed Pending": "from-amber-500/4 hover:from-amber-500/8",
-  Postponed: "from-orange-500/4 hover:from-orange-500/8",
-  Approved: "from-emerald-500/4 hover:from-emerald-500/8",
-  Declined: "from-red-500/4 hover:from-red-500/8",
-  Deferred: "from-yellow-500/4 hover:from-yellow-500/8",
-  Lost: "from-slate-500/4 hover:from-slate-500/8",
+const STATUS_COLUMN = {
+  Referred: "bg-blue-500/8",
+  Presented: "bg-violet-500/8",
+  "Closed Pending": "bg-amber-500/8",
+  Postponed: "bg-orange-500/8",
+  Approved: "bg-green-500/8",
+  Declined: "bg-red-500/8",
+  Deferred: "bg-yellow-500/10",
+  Lost: "bg-slate-500/8",
 };
 
-/**
- * The picked status (Adrian, 2026-09-15): the card's ring, and the wash over its
- * column in the table -- title, every count and the total -- in the same hue as
- * the card's gradient. Full class strings so Tailwind generates them.
- */
-const STATUS_PICK = {
-  Referred: { ring: "ring-blue-500/50", column: "bg-blue-500/8" },
-  Presented: { ring: "ring-violet-500/50", column: "bg-violet-500/8" },
-  "Closed Pending": { ring: "ring-amber-500/50", column: "bg-amber-500/8" },
-  Postponed: { ring: "ring-orange-500/50", column: "bg-orange-500/8" },
-  Approved: { ring: "ring-emerald-500/50", column: "bg-emerald-500/8" },
-  Declined: { ring: "ring-red-500/50", column: "bg-red-500/8" },
-  Deferred: { ring: "ring-yellow-500/60", column: "bg-yellow-500/10" },
-  Lost: { ring: "ring-slate-500/50", column: "bg-slate-500/8" },
-};
-
-/** An icon per status, shown in each status card's badge. */
+/** An icon per status, top right on its tile. */
 const STATUS_ICONS = {
   Referred: Send,
   Presented: Presentation,
@@ -132,10 +114,6 @@ const STATUS_ICONS = {
   Deferred: CirclePause,
   Lost: Ban,
 };
-
-function statusText(index) {
-  return STATUS_TEXT[STATUSES[index].value] ?? null;
-}
 
 export function StatusReport({
   tenantName,
@@ -156,7 +134,7 @@ export function StatusReport({
   // A status card pressed; its column is highlighted. Pressing it again clears it.
   const [picked, setPicked] = useState(null);
   const columnWash = (index) =>
-    picked === STATUSES[index].value ? STATUS_PICK[picked].column : null;
+    picked === STATUSES[index].value ? STATUS_COLUMN[picked] : null;
 
   const period = presetLabel(preset);
   const totals = reportTotals(rows);
@@ -191,6 +169,7 @@ export function StatusReport({
 
       <StatusCards
         totals={totals}
+        placeName={placeName}
         period={period}
         loading={loading}
         error={error}
@@ -398,77 +377,54 @@ export function StatusReport({
 }
 
 /**
- * One card per status, above the table (Adrian): the totals of the rows below
- * -- the same figures as the table's footer row -- for the place and period
- * shown.
+ * The status overview, above the table (Adrian): one card of StatTiles, the
+ * totals of the rows below -- the same figures as the table's footer row -- for
+ * the place and period shown.
  *
- * Built on shadcn's `section-cards` from the dashboard-01 block (base-nova),
- * via the shadcn skill (Adrian, 2026-09-15): a faint gradient in the status's
- * colour (STATUS_TINT), the label, the
- * count, an outline Badge with the status icon and its share, and a one-line
- * footer. Two across on a phone, four from sm, so the eight sit in two rows.
- * The count keeps the status colours from the table (Approved, Declined,
- * Deferred).
+ * Built on Adrian's own design, screenshots/card.png (2026-09-15): a card with a
+ * title and a description naming the place and period, then a tile per status
+ * -- faint tint and border in its hue, label and outline icon on top, the
+ * count, a muted caption. Pressing a tile highlights its column in the table;
+ * the pressed tile takes a border in its hue. Two across on a phone, four from
+ * md, so the eight sit in two rows.
  */
-function StatusCards({ totals, period, loading, error, picked, onPick }) {
+function StatusCards({ totals, placeName, period, loading, error, picked, onPick }) {
   const pending = loading || error;
 
   return (
-    <div className="grid grid-cols-2 gap-3 *:data-[slot=card]:shadow-xs sm:grid-cols-4">
-      {STATUSES.map((status, index) => {
-        const count = totals.counts[index];
-        const share = totals.total > 0 ? Math.round((count / totals.total) * 100) : 0;
-        const Icon = STATUS_ICONS[status.value];
+    <Card>
+      <CardHeader>
+        <CardTitle>Status overview</CardTitle>
+        <CardDescription>
+          {placeName} · {period} · pick a status to find its column below
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid auto-rows-fr grid-cols-2 gap-3 md:grid-cols-4">
+          {STATUSES.map((status, index) => {
+            const count = totals.counts[index];
+            const share = totals.total > 0 ? Math.round((count / totals.total) * 100) : 0;
 
-        return (
-          // Compact (Adrian: the first pass was too big) -- tighter padding,
-          // a smaller count and one footer line.
-          <Card
-            key={status.value}
-            // Pressing a card highlights its column in the table (Adrian). A div
-            // with button semantics: this Card cannot render as a <button>.
-            role="button"
-            tabIndex={0}
-            aria-pressed={picked === status.value}
-            onClick={() => onPick(status.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                onPick(status.value);
-              }
-            }}
-            className={cn(
-              "cursor-pointer gap-2 bg-linear-to-t to-card py-3 transition-shadow outline-none hover:shadow-md focus-visible:ring-[3px] focus-visible:ring-ring/50",
-              STATUS_TINT[status.value],
-              picked === status.value && ["ring-2", STATUS_PICK[status.value].ring],
-            )}
-          >
-            <CardHeader className="gap-1 px-4">
-              <CardDescription className="truncate">{status.label}</CardDescription>
-              <CardTitle
-                className={cn("text-xl font-semibold tabular-nums", count > 0 && statusText(index))}
-              >
-                {pending ? <Skeleton className="h-7 w-10" /> : formatCount(count)}
-              </CardTitle>
-              <CardAction>
-                <Badge variant="outline" className="tabular-nums">
-                  <Icon />
-                  {pending ? "—" : `${share}%`}
-                </Badge>
-              </CardAction>
-            </CardHeader>
-            <CardFooter className="px-4">
-              <span className="truncate text-[10px] text-muted-foreground tabular-nums">
-                {pending ? "—" : `Of ${formatCount(totals.total)} referrals · ${period}`}
-              </span>
-            </CardFooter>
-          </Card>
-        );
-      })}
-    </div>
+            return (
+              <StatTile
+                key={status.value}
+                label={status.label}
+                value={loading ? <Skeleton className="h-8 w-10" /> : error ? null : formatCount(count)}
+                icon={STATUS_ICONS[status.value]}
+                hint={pending ? "—" : `${share}% of ${formatCount(totals.total)} referrals`}
+                accent={STATUS_ACCENT[status.value]}
+                // The fade from the bottom, 5% and 15% on hover (Adrian).
+                fade
+                onClick={() => onPick(status.value)}
+                pressed={picked === status.value}
+              />
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
-
 /**
  * "% approved" under a place's name, in the approved green -- only when the
  * place has an approved referral (Adrian, 2026-09-15: no "0% approved"). A
@@ -484,6 +440,7 @@ function ApprovedShare({ row }) {
     </div>
   );
 }
+
 /** A separator and one drilled-into place: a link back up, or the current page. */
 function FragmentCrumb({ place, isLast, onClick }) {
   return (

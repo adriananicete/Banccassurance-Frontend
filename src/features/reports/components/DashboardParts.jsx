@@ -8,7 +8,15 @@
  * #00bb7c for approved, blue #155dfc for referrals, compact text, picture
  * before name, restrained colour.
  */
-import { ChartPie, ChevronLeft, CircleCheck, Download, FileText, Percent } from "lucide-react";
+import {
+  CalendarClock,
+  ChartPie,
+  ChevronLeft,
+  CircleCheck,
+  Download,
+  FileText,
+  Percent,
+} from "lucide-react";
 import { useState } from "react";
 import { TbChartAreaLine } from "react-icons/tb";
 
@@ -21,6 +29,7 @@ import {
   CardAction,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -167,7 +176,11 @@ export function OverviewCard({
   const rate = conversionRate(scope.approved, scope.total);
 
   return (
-    <Card className="h-full">
+    // Adrian's screenshots/card2.png: title and description, a 2 x 2 of tinted
+    // tiles, and a grey footer band that explains a figure. Tighter than the
+    // Card default so the four tiles and the band fit the lg:h-96 slot; the
+    // band sits flush with the bottom edge, so no bottom padding.
+    <Card className="h-full gap-4 overflow-hidden pt-4 pb-0">
       <CardHeader>
         {onBack ? (
           <Button
@@ -216,17 +229,30 @@ export function OverviewCard({
               label={`Conversion · ${period}`}
               value={rate != null ? `${rate}%` : null}
               icon={Percent}
+              accent="rate"
               hint="Approved out of referred"
             />
             <StatTile
               label={`Share of ${tenantName} · ${period}`}
               value={share != null ? `${share}%` : null}
               icon={ChartPie}
+              accent="share"
               hint={`Of all ${tenantName} referrals`}
             />
           </div>
         )}
       </CardContent>
+
+      {/* The footer band (card2.png): one bold line with an icon. It says how
+          Approved is counted, because a past period's figure can still rise
+          (BACKEND-REQUESTS F4). The muted sentence under it was taken off
+          (Adrian, 2026-09-15). */}
+      <CardFooter className="border-t bg-muted/50 py-3 [.border-t]:pt-3">
+        <span className="flex items-center gap-1.5 text-xs font-medium">
+          Approved is counted by referral date
+          <CalendarClock aria-hidden className="size-3.5 text-muted-foreground" />
+        </span>
+      </CardFooter>
     </Card>
   );
 }
