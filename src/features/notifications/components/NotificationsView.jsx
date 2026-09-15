@@ -99,7 +99,7 @@ export function NotificationsView({
         onValueChange={(value) => onUnreadOnlyChange(value === "unread")}
         className="w-fit"
       >
-        <TabsList aria-label="Show" className="h-auto gap-1 border bg-card p-1">
+        <TabsList aria-label="Show" className="gap-1 border bg-card p-1 group-data-horizontal/tabs:h-auto">
           <FilterTab value="all" label="All" count={total} />
           <FilterTab value="unread" label="Unread" count={unread} />
         </TabsList>

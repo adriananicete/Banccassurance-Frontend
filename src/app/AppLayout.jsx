@@ -17,6 +17,7 @@ import { useAuth } from '@/features/auth/AuthContext'
 import { useLogout } from '@/features/auth/hooks'
 import { useNotificationCounts } from '@/features/notifications/hooks'
 import { avatarUrl } from '@/lib/apiClient'
+import { THEMES, applyTheme, readTheme } from '@/lib/theme'
 
 import { navItemsForRole } from './navigation'
 
@@ -44,6 +45,15 @@ export function AppLayout() {
   const tenant = user?.tenant ?? tenantOf(user?.userCode)
 
   const [isSidebarOpen, setSidebarOpen] = useState(false)
+
+  // Light or dark, from the sidebar footer. main.jsx applied the saved one
+  // before the first render; this keeps the switch in step and saves changes.
+  const [theme, setTheme] = useState(readTheme)
+  const changeTheme = (isDark) => {
+    const next = isDark ? THEMES.DARK : THEMES.LIGHT
+    applyTheme(next)
+    setTheme(next)
+  }
 
   // Closing on navigation is handled by the shell's NavLink onClick, but a
   // route change from anywhere else (a redirect, a link inside a page) should
@@ -73,6 +83,8 @@ export function AppLayout() {
       // Sector Head, Department Head and Superadmin have no chat: every
       // /messages endpoint answers 403 and the socket is refused (BACKEND.md §11).
       canMessage={!hasRole(user?.role, MESSAGING_DENIED_ROLES)}
+      isDarkTheme={theme === THEMES.DARK}
+      onThemeChange={changeTheme}
     >
       <Outlet />
     </AppShell>
