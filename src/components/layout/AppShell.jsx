@@ -1,24 +1,16 @@
-import { LuLogOut, LuMenu, LuUser, LuX } from "react-icons/lu";
+import { LuLogOut, LuMenu, LuMoon, LuSun, LuX } from "react-icons/lu";
 import { NavLink } from "react-router";
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { UserAvatar } from "@/components/UserAvatar";
 import { formatWeekdayDate } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
 import { paths } from "@/routes/paths";
 import { IoNotificationsOutline } from "react-icons/io5";
-import { LuMoon } from "react-icons/lu";
 import { LuMessageSquareMore } from "react-icons/lu";
 import { IoSettingsOutline } from "react-icons/io5";
-import { IoIosArrowForward } from "react-icons/io";
 
 /**
  * ============================================================================
@@ -47,6 +39,7 @@ import { IoIosArrowForward } from "react-icons/io";
  *   onLogout / isLoggingOut
  *   unreadNotifications  A number. Shown on the bell when above zero.
  *   canMessage     False hides the messages icon -- for the roles with no chat.
+ *   isDarkTheme / onThemeChange(checked)   The footer's light / dark switch.
  *   children       The routed page.
  */
 export function AppShell({
@@ -65,6 +58,8 @@ export function AppShell({
   isLoggingOut,
   unreadNotifications = 0,
   canMessage = false,
+  isDarkTheme = false,
+  onThemeChange,
   children,
 }) {
 
@@ -137,53 +132,65 @@ export function AppShell({
           ))}
         </nav>
 
-        {/* The two things that are not places in the app -- the account, and
-            the way out of it. A shadcn dropdown menu that opens upward, so the
-            trigger stays put at the foot of the sidebar. */}
-        <div className="w-full px-8 pb-4">
-          <DropdownMenu>
-            <DropdownMenuTrigger className="group w-full flex justify-between items-center -mx-2.5 px-2.5 rounded-md py-1.5 cursor-pointer text-sidebar-foreground transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground data-popup-open:bg-sidebar-accent">
-              <span className="flex justify-start items-center gap-2">
-                <IoSettingsOutline size={14} aria-hidden />
-                <span className="text-xs">Settings</span>
-              </span>
-              <IoIosArrowForward
-                size={14}
-                aria-hidden
-                className="rotate-90 transition-transform duration-200 group-data-popup-open:-rotate-90"
-              />
-            </DropdownMenuTrigger>
+        {/* The sidebar footer, on Adrian's screenshots/footer.png (2026-09-15),
+            without the photo -- the account is already at the top. Settings
+            (to Profile) with sign out as a red icon on the right; a separator;
+            the light / dark switch, which moved here from the header; and the
+            credit line. */}
+        <div className="flex w-full flex-col gap-3 px-5 pb-4">
+          <div className="flex items-center justify-between gap-2">
+            <NavLink
+              to={paths.profile}
+              onClick={onCloseSidebar}
+              className={({ isActive }) =>
+                cn(
+                  "-mx-2.5 flex flex-1 items-center gap-2 rounded-md px-2.5 py-1.5 text-[11px] text-sidebar-foreground transition-colors",
+                  isActive
+                    ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
+                    : "hover:bg-sidebar-accent/60",
+                )
+              }
+            >
+              <IoSettingsOutline size={13} aria-hidden />
+              Settings
+            </NavLink>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={onLogout}
+              disabled={isLoggingOut}
+              aria-label={isLoggingOut ? "Signing out" : "Sign out"}
+              title="Sign out"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            >
+              <LuLogOut aria-hidden />
+            </Button>
+          </div>
 
-            <DropdownMenuContent side="top" align="start" sideOffset={6}>
-              <DropdownMenuGroup>
-                <DropdownMenuLabel>Account</DropdownMenuLabel>
-                {/* Rendered as the router link itself, so it is a real link --
-                    middle-click and "open in new tab" work. */}
-                <DropdownMenuItem
-                  render={<NavLink to={paths.profile} />}
-                  onClick={onCloseSidebar}
-                  className="text-xs"
-                >
-                  <LuUser aria-hidden className="size-3.5" />
-                  Profile
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
+          {/* Pulled up to sit closer to the Settings row (Adrian). */}
+          <Separator className="-mt-1.5" />
 
-              <DropdownMenuSeparator />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] text-sidebar-foreground">
+              {isDarkTheme ? "You're in dark mode" : "You're in light mode"}
+            </span>
+            {/* shadcn Switch, sized up to the screenshot, the sun or moon in
+                its thumb. */}
+            <Switch
+              checked={isDarkTheme}
+              onCheckedChange={onThemeChange}
+              aria-label="Dark mode"
+              className="cursor-pointer data-[size=default]:h-5 data-[size=default]:w-9"
+              thumbClassName="flex items-center justify-center text-muted-foreground shadow-sm group-data-[size=default]/switch:size-4 group-data-[size=default]/switch:data-checked:translate-x-4"
+            >
+              {isDarkTheme ? <LuMoon className="size-2.5" /> : <LuSun className="size-2.5" />}
+            </Switch>
+          </div>
 
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={onLogout}
-                disabled={isLoggingOut}
-                className="text-xs"
-              >
-                <LuLogOut aria-hidden className="size-3.5" />
-                {isLoggingOut ? "Signing out…" : "Sign out"}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </aside>
+          <p className="text-[9px] text-muted-foreground">
+            Design &amp; Built by Phillife-IT
+          </p>
+        </div>      </aside>
 
       <div className="lg:pl-56">
         {/* Opaque, so content scrolling under the sticky header is covered
@@ -236,7 +243,6 @@ export function AppShell({
               badge={unreadNotifications}
             />
 
-            <HeaderIconButton Icon={LuMoon} label="Switch to dark theme" />
           </div>
         </header>
 

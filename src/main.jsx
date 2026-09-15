@@ -6,6 +6,10 @@ import { createRoot } from 'react-dom/client'
 import '@fontsource-variable/inter'
 import './index.css'
 import App from './App.jsx'
+import { applyTheme, readTheme } from './lib/theme'
+
+// Before the first render, so a dark-mode reload never flashes light.
+applyTheme(readTheme())
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
