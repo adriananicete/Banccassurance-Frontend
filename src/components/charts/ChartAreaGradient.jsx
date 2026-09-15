@@ -77,6 +77,14 @@ const chartConfig = {
   },
 };
 
+/*
+  The referrals and approved figures share one class so they line up. Both go
+  through cn(), so both end with text-3xl's own line height: CardTitle's
+  leading-none is dropped by tailwind-merge, and a leading-none kept on only one
+  of them put its label 6px higher.
+*/
+const HEADLINE_CLASS = "flex items-center gap-2 text-3xl font-semibold tabular-nums";
+
 export function ChartAreaGradient({
   data = [],
   headline = null,
@@ -132,7 +140,7 @@ export function ChartAreaGradient({
       <CardHeader className="border-b [.border-b]:pb-4 sm:has-data-[slot=card-action]:grid-cols-[1fr_auto_1fr]">
         {/* The number is the headline and the words explain it. */}
         <div className="col-start-1 row-start-1 space-y-1.5">
-          <CardTitle className="flex items-center gap-2 text-3xl font-semibold tabular-nums">
+          <CardTitle className={HEADLINE_CLASS}>
             {/* Decorative -- the label below already names the figure. */}
             <HiUserGroup aria-hidden className="size-7 text-muted-foreground" />
             {loading || error || headline == null ? "—" : headline.toLocaleString("en-PH")}
@@ -146,7 +154,7 @@ export function ChartAreaGradient({
             #00bb7c badge beside the number. */}
         {showApproved && !loading && !error && headlineApproved != null ? (
           <div className="col-span-2 row-start-2 space-y-1.5 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:justify-self-center">
-            <div className="flex items-center gap-2 text-3xl leading-none font-semibold tabular-nums">
+            <div className={cn("leading-none font-semibold", HEADLINE_CLASS)}>
               {/* Dark green, a shade under the #00bb7c share beside it (Adrian). */}
               <HiBadgeCheck aria-hidden className="size-7 text-emerald-700 dark:text-emerald-500" />
               {headlineApproved.toLocaleString("en-PH")}
