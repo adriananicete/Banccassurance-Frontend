@@ -6,11 +6,12 @@
  *   Department Head            Sector Head
  *   Region buttons        ->   none -- the Groups card is the control (Adrian)
  *   Regions card          ->   Groups card, every group
- *   a region's Overview   ->   a group's Overview, with "← Groups" back
+ *   a region's Overview   ->   none -- the Groups card stays, the picked group
+ *                                highlighted (Adrian, 2026-09-15)
  *   Groups table          ->   Branches table, 10 per page
  *
  * No NCR / Luzon / VisMin buttons (Adrian, 2026-09-14): picking a group in the
- * card narrows the chart, the Overview and the Branches table, which is all a
+ * card narrows the chart and the Branches table, which is all a
  * Sector Head needs, and Landbank has no one heading a region.
  *
  * Presentational and CONTROLLED -- `pages/SectorHeadDashboardPage.jsx` owns
@@ -28,18 +29,18 @@
  *   branches     [{ code, name, parentName, total, approved, head... }] -- the
  *                branches in view.
  *   summaryLoading / summaryError   The headline.
- *   groupsLoading / groupsError     The Groups card and a group's Overview.
+ *   groupsLoading / groupsError     The Groups card.
  *   chartLoading / chartError
  *   branchesLoading / branchesError
  *   onExport / isExporting / exportError
  */
 import { ChartAreaGradient } from "@/components/charts/ChartAreaGradient";
 
-import { presetLabel, shareOf } from "../dashboardFormat";
+import { ALL_REGIONS } from "../dashboardData";
+import { presetLabel } from "../dashboardFormat";
 import {
   DashboardTitle,
   ExportControl,
-  OverviewCard,
   PlacesCard,
   PlacesTable,
 } from "./DashboardParts";
@@ -106,36 +107,27 @@ export function SectorHeadDashboard({
           />
         </div>
 
-        {/* Every group, or once one is picked, that group's figures with a way
-            back to the list. */}
+        {/* The Groups card STAYS when a group is picked (Adrian, 2026-09-15):
+            it is the Sector Head's only control for the chart and the Branches
+            table, so it must not give way to an Overview the way the Department
+            Head's Regions card does (they have the region tabs to go back). The
+            picked row is highlighted; pressing it again goes back to all of
+            Landbank. */}
         <div className="lg:h-96">
-          {activeGroup ? (
-            <OverviewCard
-              scope={activeGroup}
-              share={shareOf(activeGroup.total, tenant.total)}
-              period={period}
-              loading={groupsLoading}
-              error={groupsError}
-              tenantName={TENANT}
-              headRoleLabel="Group Head"
-              onBack={() => onSelectGroup(null)}
-              backLabel="Groups"
-            />
-          ) : (
-            <PlacesCard
-              title="Groups"
-              items={groups}
-              total={tenant.total}
-              period={period}
-              selected={selectedGroup}
-              onSelect={onSelectGroup}
-              loading={summaryLoading || groupsLoading}
-              error={summaryError ?? groupsError}
-              tenantName={TENANT}
-              noHeadLabel="No Group Head assigned"
-              emptyText="No groups to show."
-            />
-          )}
+          <PlacesCard
+            title="Groups"
+            items={groups}
+            total={tenant.total}
+            period={period}
+            selected={selectedGroup ?? ALL_REGIONS}
+            onSelect={(code) => onSelectGroup(code === ALL_REGIONS ? null : code)}
+            toggle
+            loading={summaryLoading || groupsLoading}
+            error={summaryError ?? groupsError}
+            tenantName={TENANT}
+            noHeadLabel="No Group Head assigned"
+            emptyText="No groups to show."
+          />
         </div>
       </div>
 
