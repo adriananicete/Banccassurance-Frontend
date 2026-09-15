@@ -26,9 +26,11 @@
 import {
   CircleCheck,
   CircleX,
+  RotateCcw,
   Search,
   ShieldAlert,
   UserCheck,
+  UserMinus,
   UserRoundSearch,
   UserX,
   Users,
@@ -41,6 +43,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
@@ -81,16 +84,17 @@ import {
 
 /**
  * The four tiles, in the order an approver works: what waits, what was
- * decided, then everything. Accents are StatTile's meanings -- queue amber,
- * done green, stopped red, total blue.
+ * decided, what was switched off. Accents are StatTile's meanings -- queue
+ * amber, done green, stopped red, ended slate. "All" is the button in the
+ * card's header, so the 2 x 2 stays whole with the fifth status (F13).
  */
 const STATUS_TILES = [
   { status: APPROVAL_STATUS.PENDING, icon: UserRoundSearch, accent: "queue", hint: "waiting for your decision" },
   { status: APPROVAL_STATUS.APPROVED, icon: UserCheck, accent: "done", hint: "can sign in" },
-  // IsActive -1 covers both, and the list cannot tell them apart (BACKEND.md §6).
-  { status: APPROVAL_STATUS.REJECTED, icon: UserX, accent: "stopped", hint: "rejected or deactivated" },
-  { status: APPROVAL_STATUS.ALL, icon: Users, accent: "total", hint: "every registration you can see" },
+  { status: APPROVAL_STATUS.REJECTED, icon: UserX, accent: "stopped", hint: "refused at registration" },
+  { status: APPROVAL_STATUS.DEACTIVATED, icon: UserMinus, accent: "ended", hint: "approved, then switched off" },
 ];
+
 export function ApprovalsView({
   approvesLabel,
   status,
@@ -156,6 +160,25 @@ export function ApprovalsView({
           <CardHeader>
             <CardTitle>Overview</CardTitle>
             <CardDescription>Registration status for the {approvesLabel} under you</CardDescription>
+            {/* Every status at once -- the filter the tiles narrow. */}
+            <CardAction>
+              <Button
+                variant="outline"
+                size="xs"
+                aria-pressed={status === APPROVAL_STATUS.ALL}
+                onClick={() => onStatusChange(APPROVAL_STATUS.ALL)}
+                className={cn(
+                  "text-xs tabular-nums",
+                  status === APPROVAL_STATUS.ALL && "border-blue-400/70 bg-blue-50 dark:border-blue-400/50 dark:bg-blue-500/10",
+                )}
+              >
+                <Users data-icon="inline-start" />
+                All
+                <span className="text-muted-foreground">
+                  {countsLoading || counts?.ALL == null ? "—" : formatCount(counts.ALL)}
+                </span>
+              </Button>
+            </CardAction>
           </CardHeader>
           <CardContent>
             <div role="group" aria-label="Filter by status" className="grid auto-rows-fr grid-cols-2 gap-3">
@@ -355,11 +378,11 @@ function StatusBadge({ status }) {
 }
 
 /**
- * What can be done to a row. A pending registration is approved or rejected;
- * an approved account can be deactivated by a superadmin. Anything else has
- * no action -- a rejected registration cannot come back (BACKEND.md §6), and
- * the list cannot tell a deactivated account from a rejected one, so there is
- * no Reactivate here.
+ * What can be done to a row. A pending registration is approved or rejected.
+ * Deactivate and reactivate are superadmin only (`canDeactivate`): an approved
+ * account can be deactivated, a DEACTIVATED one reactivated (F13). Every other
+ * approver sees their people's DEACTIVATED rows but cannot act on them, so the
+ * row says who can (F15). A REJECTED registration never comes back -- no action.
  */
 function RowActions({ row, canDeactivate, onAction, className }) {
   if (row.status === APPROVAL_STATUS.PENDING) {
@@ -394,6 +417,26 @@ function RowActions({ row, canDeactivate, onAction, className }) {
           Deactivate
         </Button>
       </div>
+    );
+  }
+
+  if (row.status === APPROVAL_STATUS.DEACTIVATED) {
+    return canDeactivate ? (
+      <div className={cn("flex items-center md:justify-end", className)}>
+        <Button
+          variant="outline"
+          size="xs"
+          onClick={() => onAction(row, APPROVAL_ACTION.REACTIVATE)}
+          className="text-xs"
+        >
+          <RotateCcw data-icon="inline-start" />
+          Reactivate
+        </Button>
+      </div>
+    ) : (
+      <p className={cn("text-[10px] text-muted-foreground md:text-right", className)}>
+        Only a superadmin can reactivate this account.
+      </p>
     );
   }
 

@@ -78,7 +78,10 @@ export function PendingApprovalsCard({ rows = [], count, loading = false, error 
                       ) : null}
                     </div>
                     <div className="truncate text-xs text-muted-foreground">
-                      {row.place ?? "No group or branch on record"} · {formatDate(row.createdAt)}
+                      {/* Where they registered, never what they hold (F12). A
+                          Regional Sales Head picks nothing, so only the date. */}
+                      {row.place ? `Registered under ${row.place} · ` : null}
+                      {formatDate(row.createdAt)}
                     </div>
                   </div>
                   <Button
