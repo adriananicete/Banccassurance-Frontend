@@ -4,9 +4,18 @@ import { Outlet, useLocation } from 'react-router'
 import landbankLogo from '@/assets/landbank-logo-png_seeklogo-351859.png'
 import philLifeLogo from '@/assets/PhilLife-Color-resize.png'
 import { AppShell } from '@/components/layout/AppShell'
-import { REACH, ROLE_LABELS, TENANT_LABELS, TENANTS, tenantOf } from '@/constants/roles'
+import {
+  MESSAGING_DENIED_ROLES,
+  REACH,
+  ROLE_LABELS,
+  TENANT_LABELS,
+  TENANTS,
+  hasRole,
+  tenantOf,
+} from '@/constants/roles'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useLogout } from '@/features/auth/hooks'
+import { useNotificationCounts } from '@/features/notifications/hooks'
 import { avatarUrl } from '@/lib/apiClient'
 
 import { navItemsForRole } from './navigation'
@@ -27,6 +36,8 @@ const TENANT_LOGOS = {
 export function AppLayout() {
   const { user, profile } = useAuth()
   const logoutMutation = useLogout()
+  // The bell's badge: every unread the user has, refreshed every minute.
+  const notificationCounts = useNotificationCounts()
   const location = useLocation()
 
   // The session's tenant, or the user code's prefix if it has not arrived.
@@ -58,6 +69,10 @@ export function AppLayout() {
       onCloseSidebar={() => setSidebarOpen(false)}
       onLogout={() => logoutMutation.mutate()}
       isLoggingOut={logoutMutation.isPending}
+      unreadNotifications={notificationCounts.unread ?? 0}
+      // Sector Head, Department Head and Superadmin have no chat: every
+      // /messages endpoint answers 403 and the socket is refused (BACKEND.md §11).
+      canMessage={!hasRole(user?.role, MESSAGING_DENIED_ROLES)}
     >
       <Outlet />
     </AppShell>
