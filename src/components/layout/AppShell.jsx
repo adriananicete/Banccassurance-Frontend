@@ -64,7 +64,14 @@ export function AppShell({
 }) {
 
   return (
-    <div className="min-h-screen bg-background">
+    // Full screen up to 1800px wide -- 14" to 16" laptops. From 1800px (17"
+    // and larger screens, usually 1920px) the app becomes an inset card on a
+    // #e5e7eb ground with a shadow, on Adrian's screenshots/backgroundStyle.png
+    // (2026-09-15). A browser knows pixels, not inches, so 1800px is the line.
+    // Inset, the card is the scroll container: the sidebar is absolute to it
+    // rather than fixed to the window, and the content column scrolls inside.
+    <div className="min-h-screen bg-background min-[1800px]:h-dvh min-[1800px]:bg-[#e5e7eb] min-[1800px]:px-10 min-[1800px]:py-6 min-[1800px]:dark:bg-black">
+      <div className="relative min-[1800px]:h-full min-[1800px]:overflow-hidden min-[1800px]:rounded-md min-[1800px]:bg-background min-[1800px]:shadow-xl">
       {/* Mobile backdrop. Hidden from assistive tech -- the close button in
           the sidebar header is the labelled way out. */}
       {isSidebarOpen ? (
@@ -77,7 +84,7 @@ export function AppShell({
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-56 flex-col border-r border-sidebar-border bg-sidebar transition-transform duration-200",
+          "fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-sidebar-border bg-sidebar transition-transform duration-200 min-[1800px]:absolute",
           "lg:translate-x-0",
           isSidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
@@ -86,7 +93,7 @@ export function AppShell({
             from login and a fresh browser may not have it yet while the session
             is valid, so it falls back to the user code; the photo falls back to
             initials. */}
-        <div className="flex h-16 shrink-0 items-center justify-start gap-3 border-b border-sidebar-border px-4">
+        <div className="flex h-18 shrink-0 items-center justify-start gap-3 border-b border-sidebar-border px-4">
           <UserAvatar src={avatarSrc} name={displayName ?? userCode} size="lg" />
 
           <div className="min-w-0 flex-1 h-full flex flex-col justify-center items-start">
@@ -192,10 +199,12 @@ export function AppShell({
           </p>
         </div>      </aside>
 
-      <div className="lg:pl-56">
+      <div className="lg:pl-60 min-[1800px]:h-full min-[1800px]:overflow-y-auto">
         {/* Opaque, so content scrolling under the sticky header is covered
             rather than showing through it. */}
-        <header className="sticky top-0 z-20 flex h-16 justify-between items-center gap-3 border-b border-border bg-background px-4">
+        {/* px-6, up from px-4, and h-18, up from h-16 (Adrian). The sidebar's
+            account block is h-18 too, so the two bottom borders stay level. */}
+        <header className="sticky top-0 z-20 flex h-18 justify-between items-center gap-3 border-b border-border bg-background px-6">
           <div className="h-full flex justify-start items-center gap-2">
             {/* The signed-in user's company: Landbank or PhilLife. Height-bound,
                 because one logo is wide and the other square. */}
@@ -256,6 +265,7 @@ export function AppShell({
         ) : null}
 
         <main className="p-4">{children}</main>
+      </div>
       </div>
     </div>
   );
