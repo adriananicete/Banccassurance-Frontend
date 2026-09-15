@@ -13,6 +13,7 @@ import {
 } from '@/constants/roles'
 import { AuthLayoutRoute } from '@/features/auth/pages/AuthLayoutRoute'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
+import { NotificationsPage } from '@/features/notifications/pages/NotificationsPage'
 import { VerifyOtpPage } from '@/features/auth/pages/VerifyOtpPage'
 import { DashboardPage } from '@/features/reports/pages/DashboardPage'
 import { ReportsPage } from '@/features/reports/pages/ReportsPage'
@@ -210,17 +211,8 @@ export const router = createBrowserRouter([
 
           {
             path: paths.notifications,
-            element: (
-              <NotBuiltYet
-                title="Notifications"
-                note="The list key is `notifications`, not `data`, and the badge comes from `unreadCount` rather than the returned array."
-                endpoints={[
-                  'GET /notifications',
-                  'PUT /notifications/:id/read',
-                  'PUT /notifications/mark-all-read',
-                ]}
-              />
-            ),
+            // Reached from the bell in the header, not the sidebar (Adrian).
+            element: <NotificationsPage />,
           },
           {
             path: paths.profile,

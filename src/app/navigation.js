@@ -1,5 +1,4 @@
 import {
-  LuBell,
   LuFileText,
   LuLayoutDashboard,
   LuList,
@@ -90,11 +89,7 @@ export const NAV_ITEMS = [
     // handshake is refused, so the icon is hidden rather than left to fail.
     denied: MESSAGING_DENIED_ROLES,
   },
-  {
-    to: paths.notifications,
-    label: 'Notifications',
-    Icon: LuBell,
-  },
+
   {
     to: paths.audit,
     label: 'Audit log',
@@ -102,6 +97,8 @@ export const NAV_ITEMS = [
     // Superadmin only -- including the roles that write rows to it.
     allowed: AUDIT_ROLES,
   },
+  // Notifications is NOT here either: it is the bell in the header, with the
+  // unread count on it (Adrian, 2026-09-15).
   // Profile is deliberately NOT here. It sits in the shell's Settings block at
   // the foot of the sidebar, beside sign out -- the account and the way out of
   // it are not places in the app the way the entries above are. Every role sees

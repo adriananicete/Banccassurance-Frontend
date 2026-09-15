@@ -45,6 +45,8 @@ import { IoIosArrowForward } from "react-icons/io";
  *   isSidebarOpen  Mobile only. The sidebar is always visible from lg up.
  *   onToggleSidebar / onCloseSidebar
  *   onLogout / isLoggingOut
+ *   unreadNotifications  A number. Shown on the bell when above zero.
+ *   canMessage     False hides the messages icon -- for the roles with no chat.
  *   children       The routed page.
  */
 export function AppShell({
@@ -61,6 +63,8 @@ export function AppShell({
   onCloseSidebar,
   onLogout,
   isLoggingOut,
+  unreadNotifications = 0,
+  canMessage = false,
   children,
 }) {
 
@@ -213,16 +217,23 @@ export function AppShell({
               {formatWeekdayDate()}
             </span>
 
-            {/* Messages deliberately has no `to` yet -- see the note on
-                HeaderIconButton. Three roles get a 403 on every /messages
-                endpoint, and this header is not filtered by role the way the
-                sidebar is. */}
-            <HeaderIconButton Icon={LuMessageSquareMore} label="Messages" />
+            {/* Messages has no `to` yet -- the screen is not built. Hidden for
+                the Sector Head, Department Head and Superadmin, who have no
+                chat at all: every /messages endpoint answers 403 for them
+                (Adrian, 2026-09-15). */}
+            {canMessage ? <HeaderIconButton Icon={LuMessageSquareMore} label="Messages" /> : null}
 
+            {/* The only way to Notifications -- it left the sidebar (Adrian).
+                The count is every unread the user has. */}
             <HeaderIconButton
               Icon={IoNotificationsOutline}
-              label="Notifications"
+              label={
+                unreadNotifications > 0
+                  ? `Notifications, ${unreadNotifications} unread`
+                  : "Notifications"
+              }
               to={paths.notifications}
+              badge={unreadNotifications}
             />
 
             <HeaderIconButton Icon={LuMoon} label="Switch to dark theme" />
@@ -253,6 +264,8 @@ export function AppShell({
  *            tooltip is the only thing that says what it does on a mouse.
  *   to       A route, for the ones that go somewhere.
  *   onClick  An action, for the ones that do something here.
+ *   badge    Optional number. Above zero, a small blue count on the corner,
+ *            capped at 99+.
  *
  * Pass one of `to` or `onClick`. With neither it renders as a disabled button
  * rather than something that looks live and swallows the click.
@@ -260,14 +273,25 @@ export function AppShell({
  * ⚠️ THIS ROW IS NOT FILTERED BY ROLE, unlike the sidebar. If an entry only
  * works for some roles, the caller has to decide -- this component cannot.
  */
-function HeaderIconButton({ Icon, label, to, onClick }) {
+function HeaderIconButton({ Icon, label, to, onClick, badge = 0 }) {
   const className =
-    "border bg-neutral-100 flex justify-center items-center p-2 rounded-sm transition-colors hover:bg-neutral-200";
+    "relative border bg-neutral-100 flex justify-center items-center p-2 rounded-sm transition-colors hover:bg-neutral-200";
+
+  const count =
+    badge > 0 ? (
+      <span
+        aria-hidden
+        className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#155dfc] px-1 text-[10px] leading-none font-semibold text-white tabular-nums"
+      >
+        {badge > 99 ? "99+" : badge}
+      </span>
+    ) : null;
 
   if (to) {
     return (
       <NavLink to={to} aria-label={label} title={label} className={className}>
         <Icon aria-hidden />
+        {count}
       </NavLink>
     );
   }
