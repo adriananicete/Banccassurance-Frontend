@@ -108,6 +108,7 @@ export function DepartmentHeadDashboard({
             headline={scope.total}
             headlineApproved={scope.approved}
             headlineLabel={`Total referrals · ${period}`}
+            approvedLabel={period}
             title="Referrals by month"
             description={`${scope.name} · ${period}`}
             sliderRange={sliderRange}
