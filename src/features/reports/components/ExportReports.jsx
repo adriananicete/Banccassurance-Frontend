@@ -188,7 +188,7 @@ export function ExportReports({
               <TabsTrigger
                 key={item.value}
                 value={item.value}
-                className="h-7 flex-none px-2.5 text-xs data-active:bg-primary data-active:text-primary-foreground data-active:shadow-none dark:data-active:bg-primary dark:data-active:text-primary-foreground"
+                className="h-7 flex-none px-2.5 text-xs data-active:bg-primary data-active:text-primary-foreground data-active:shadow-none data-active:hover:text-primary-foreground dark:data-active:bg-primary dark:data-active:text-primary-foreground"
               >
                 {item.label}
               </TabsTrigger>
