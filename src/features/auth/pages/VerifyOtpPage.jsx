@@ -69,8 +69,12 @@ export function VerifyOtpPage() {
     verifyMutation.mutate(
       { identifier: challenge.identifier, otp: values.otp },
       {
+        // Always home -- `/` redirects to the role's Dashboard -- never the
+        // page remembered in `from` (Adrian, 2026-09-15). Signing out passes
+        // through RequireAuth, which stores the page signed out of as `from`,
+        // so honouring it sent every re-login back to that page.
         onSuccess: () => {
-          navigate(from?.pathname ?? paths.home, { replace: true })
+          navigate(paths.home, { replace: true })
         },
       },
     )

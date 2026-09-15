@@ -105,6 +105,15 @@ export const NAV_ITEMS = [
   // it, so nothing is lost by leaving it out of this role-filtered list.
 ]
 
+/**
+ * Where a signed-in role lands: the Dashboard (Adrian, 2026-09-15 -- "the
+ * default after OTP should be the dashboard"). A superadmin has no dashboard,
+ * so they land on Approvals, the first screen that is theirs.
+ */
+export function homeFor(role) {
+  return role === ROLES.SUPERADMIN ? paths.approvals : paths.dashboard
+}
+
 export function navItemsForRole(role) {
   if (!role) return []
   return NAV_ITEMS.filter((item) => {
