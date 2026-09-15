@@ -15,6 +15,7 @@ import {
 } from '@/constants/roles'
 import { useAuth } from '@/features/auth/AuthContext'
 import { useLogout } from '@/features/auth/hooks'
+import { useMessagesSocket, useUnreadMessages } from '@/features/messages/hooks'
 import { useNotificationCounts } from '@/features/notifications/hooks'
 import { avatarUrl } from '@/lib/apiClient'
 import { THEMES, applyTheme, readTheme } from '@/lib/theme'
@@ -39,6 +40,11 @@ export function AppLayout() {
   const logoutMutation = useLogout()
   // The bell's badge: every unread the user has, refreshed every minute.
   const notificationCounts = useNotificationCounts()
+  // Chat, for the six roles that have it: the icon's unread count, and the
+  // socket that refreshes messages as they arrive.
+  const canMessage = !hasRole(user?.role, MESSAGING_DENIED_ROLES)
+  const unreadMessages = useUnreadMessages({ enabled: Boolean(user) && canMessage })
+  useMessagesSocket(Boolean(user) && canMessage)
   const location = useLocation()
 
   // The session's tenant, or the user code's prefix if it has not arrived.
@@ -82,7 +88,8 @@ export function AppLayout() {
       unreadNotifications={notificationCounts.unread ?? 0}
       // Sector Head, Department Head and Superadmin have no chat: every
       // /messages endpoint answers 403 and the socket is refused (BACKEND.md §11).
-      canMessage={!hasRole(user?.role, MESSAGING_DENIED_ROLES)}
+      canMessage={canMessage}
+      unreadMessages={unreadMessages.data ?? 0}
       isDarkTheme={theme === THEMES.DARK}
       onThemeChange={changeTheme}
     >

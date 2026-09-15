@@ -2,7 +2,6 @@ import {
   LuFileText,
   LuLayoutDashboard,
   LuList,
-  LuMessageSquare,
   LuPlus,
   LuShield,
   LuUserCheck,
@@ -15,7 +14,6 @@ import {
   ASSIGN_GROUPS_ROLES,
   ASSIGN_REGION_ROLES,
   AUDIT_ROLES,
-  MESSAGING_DENIED_ROLES,
   REFERRAL_CREATOR_ROLES,
   REFERRAL_LIST_DENIED_ROLES,
   ROLES,
@@ -81,14 +79,9 @@ export const NAV_ITEMS = [
     Icon: LuUsers,
     allowed: ASSIGNER_ROLES,
   },
-  {
-    to: paths.messages,
-    label: 'Messages',
-    Icon: LuMessageSquare,
-    // Three roles get a 403 on all seven /messages endpoints and their socket
-    // handshake is refused, so the icon is hidden rather than left to fail.
-    denied: MESSAGING_DENIED_ROLES,
-  },
+  // Messages is NOT here: it is the message icon in the header, with the unread
+  // count on it (Adrian, 2026-09-15). The route still refuses the three roles
+  // with no chat (MESSAGING_DENIED_ROLES).
 
   {
     to: paths.audit,
