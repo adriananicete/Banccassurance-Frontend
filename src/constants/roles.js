@@ -80,17 +80,16 @@ export const MESSAGING_DENIED_ROLES = [
 ]
 
 /**
- * No referral list for these. A superadmin never reads referrals. The Sector
- * Head and Department Head CAN read their tenant's list through the API, but
- * they oversee from the dashboard and reports rather than working referrals
- * one by one, so the Referrals screen is not theirs (Adrian, 2026-09-14).
- * This is a UI choice, not an API refusal.
+ * No Referrals screen for these. A superadmin never reads referrals.
+ *
+ * The Sector Head and Department Head had it hidden on 2026-09-14 and got it
+ * back on 2026-09-15 (Adrian): their Referrals screen is the status drill-down
+ * by place, while Reports became the export page. See TENANT_HEAD_ROLES.
  */
-export const REFERRAL_LIST_DENIED_ROLES = [
-  ROLES.SECTOR_HEAD,
-  ROLES.DEPARTMENT_HEAD,
-  ROLES.SUPERADMIN,
-]
+export const REFERRAL_LIST_DENIED_ROLES = [ROLES.SUPERADMIN]
+
+/** The two tenant heads -- one tenant each, overseeing rather than working referrals. */
+export const TENANT_HEAD_ROLES = [ROLES.DEPARTMENT_HEAD, ROLES.SECTOR_HEAD]
 
 /** GET /audit is superadmin only -- including the roles that write rows to it. */
 export const AUDIT_ROLES = [ROLES.SUPERADMIN]

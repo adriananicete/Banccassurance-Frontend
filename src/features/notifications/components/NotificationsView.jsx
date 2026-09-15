@@ -227,7 +227,7 @@ function FilterTab({ value, label, count }) {
   return (
     <TabsTrigger
       value={value}
-      className="group/filter h-7 flex-none gap-2 px-2.5 text-xs data-active:bg-primary data-active:text-primary-foreground data-active:shadow-none dark:data-active:bg-primary dark:data-active:text-primary-foreground"
+      className="group/filter h-7 flex-none gap-2 px-2.5 text-xs data-active:bg-primary data-active:text-primary-foreground data-active:shadow-none data-active:hover:text-primary-foreground dark:data-active:bg-primary dark:data-active:text-primary-foreground"
     >
       {label}
       <span className="min-w-6 rounded-full px-1.5 text-center text-[11px] tabular-nums group-data-active/filter:bg-background group-data-active/filter:text-foreground">
